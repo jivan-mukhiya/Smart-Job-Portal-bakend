@@ -86,7 +86,8 @@ public enum ErrorCode {
     // =========================
     // Company
     // =========================
-
+    INVALID_COMPANY_STATUS("COMPANY_0016",
+            "Company Status not valid"),
     COMPANY_NOT_FOUND(
             "COMPANY_001",
             "Company not found"
@@ -95,6 +96,71 @@ public enum ErrorCode {
     COMPANY_ALREADY_EXISTS(
             "COMPANY_002",
             "Company already exists"
+    ),
+
+    COMPANY_NAME_ALREADY_EXISTS(
+            "COMPANY_003",
+            "Company name already exists"
+    ),
+
+    COMPANY_EMAIL_ALREADY_EXISTS(
+            "COMPANY_004",
+            "Company email already exists"
+    ),
+
+    COMPANY_INACTIVE(
+            "COMPANY_005",
+            "Company is inactive"
+    ),
+
+    COMPANY_NOT_APPROVED(
+            "COMPANY_006",
+            "Company is not approved"
+    ),
+
+    COMPANY_SUSPENDED(
+            "COMPANY_007",
+            "Company is suspended"
+    ),
+
+    COMPANY_ALREADY_APPROVED(
+            "COMPANY_008",
+            "Company is already approved"
+    ),
+
+    COMPANY_ALREADY_REJECTED(
+            "COMPANY_009",
+            "Company is already rejected"
+    ),
+
+    COMPANY_IMAGE_NOT_FOUND(
+            "COMPANY_010",
+            "Company image not found"
+    ),
+
+    COMPANY_ADDRESS_NOT_FOUND(
+            "COMPANY_011",
+            "Company address not found"
+    ),
+
+    SOCIAL_LINK_NOT_FOUND(
+            "COMPANY_012",
+            "Social link not found"
+    ),
+
+    SOCIAL_LINK_ALREADY_EXISTS(
+            "COMPANY_013",
+            "Social link already exists for this platform"
+    ),
+
+    INVALID_SOCIAL_PLATFORM(
+            "COMPANY_014",
+            "Invalid social platform"
+    ),
+
+    COMPANY_STATISTICS_NOT_FOUND(
+            "COMPANY_015",
+            "Company statistics not found"
     ),
 
     // =========================

@@ -34,24 +34,13 @@ public class SecurityConfig {
 
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
-
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http
     ) throws Exception {
 
         http
-
-                // =====================================================
-                // CSRF
-                // =====================================================
-
                 .csrf(csrf -> csrf.disable())
-
-
-                // =====================================================
-                // SESSION
-                // =====================================================
 
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
@@ -59,138 +48,74 @@ public class SecurityConfig {
                         )
                 )
 
-
-                // =====================================================
-                // AUTHENTICATION PROVIDER
-                // =====================================================
-
                 .authenticationProvider(
                         authenticationProvider()
                 )
 
-
-                // =====================================================
-                // EXCEPTION HANDLING
-                // =====================================================
-
-                .exceptionHandling(exception -> exception
-
-                        // User is NOT authenticated
-                        // => 401
-                        .authenticationEntryPoint(
-                                jwtAuthenticationEntryPoint
-                        )
-
-                        // User is authenticated but
-                        // does NOT have required role
-                        // => 403
-                        .accessDeniedHandler(
-                                jwtAccessDeniedHandler
-                        )
+                .exceptionHandling(exception ->
+                        exception
+                                .authenticationEntryPoint(
+                                        jwtAuthenticationEntryPoint
+                                )
+                                .accessDeniedHandler(
+                                        jwtAccessDeniedHandler
+                                )
                 )
-
-
-                // =====================================================
-                // AUTHORIZATION
-                // =====================================================
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // =================================================
-                        // PUBLIC ENDPOINTS
-                        // =================================================
-
+                        // PUBLIC
                         .requestMatchers(
                                 "/auth/register",
                                 "/auth/login"
                         ).permitAll()
 
-
-                        // =================================================
-                        // SWAGGER
-                        // =================================================
-
+                        // Swagger
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
                         ).permitAll()
 
+                        // Public company checks
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/companies/email/check",
+                                "/companies/name/check"
+                        ).permitAll()
 
-                        // =================================================
-                        // ADMIN ONLY
-                        // =================================================
+                        // Company APIs are handled
+                        // using @PreAuthorize.
+                        .requestMatchers(
+                                "/companies/**"
+                        ).authenticated()
 
-                        // GET /users
+                        // User APIs
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/users"
                         ).hasRole("ADMIN")
 
-
-                        // DELETE /users/{id}
                         .requestMatchers(
                                 HttpMethod.DELETE,
                                 "/users/*"
                         ).hasRole("ADMIN")
 
-
-                        // =================================================
-                        // GET USER
-                        // =================================================
-
-                        // GET /users/{id}
                         .requestMatchers(
-                                HttpMethod.GET,
-                                "/users/*"
+                                "/users/**"
                         ).authenticated()
 
-
-                        // GET /users/email/{email}
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/users/email/**"
-                        ).authenticated()
-
-
-                        // =================================================
-                        // UPDATE USER
-                        // =================================================
-
-                        // Authentication required.
-                        // Actual ownership check is handled by
-                        // @PreAuthorize in UserController.
-                        .requestMatchers(
-                                HttpMethod.PUT,
-                                "/users/*"
-                        ).authenticated()
-
-
-                        // =================================================
-                        // EVERYTHING ELSE
-                        // =================================================
-
-                        .anyRequest().authenticated()
+                        .anyRequest()
+                        .authenticated()
                 )
-
-
-                // =====================================================
-                // JWT FILTER
-                // =====================================================
 
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
                 );
 
-
         return http.build();
     }
-
-
-    // ================================================================
-    // AUTHENTICATION PROVIDER
-    // ================================================================
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
@@ -209,21 +134,10 @@ public class SecurityConfig {
         return provider;
     }
 
-
-    // ================================================================
-    // PASSWORD ENCODER
-    // ================================================================
-
     @Bean
     public PasswordEncoder passwordEncoder() {
-
         return new BCryptPasswordEncoder();
     }
-
-
-    // ================================================================
-    // AUTHENTICATION MANAGER
-    // ================================================================
 
     @Bean
     public AuthenticationManager authenticationManager(
