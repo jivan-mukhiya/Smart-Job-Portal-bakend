@@ -1,5 +1,7 @@
 package com.texas.smart.job.portal.modules.company.controller;
 
+import com.texas.smart.job.portal.common.response.ApiResponse;
+import com.texas.smart.job.portal.common.response.PageResponse;
 import com.texas.smart.job.portal.modules.company.dto.request.CompanyRegistrationRequest;
 import com.texas.smart.job.portal.modules.company.dto.request.CompanyStatusUpdateRequest;
 import com.texas.smart.job.portal.modules.company.dto.request.CompanyUpdateRequest;
@@ -30,14 +32,20 @@ public class CompanyController {
      */
     @PostMapping
     @PreAuthorize("hasRole('COMPANY')")
-    public ResponseEntity<CompanyRegistrationResponse> createCompany(
+    public ResponseEntity<ApiResponse<CompanyRegistrationResponse>> createCompany(
             @Valid @ModelAttribute CompanyRegistrationRequest request
     ) {
+
+        CompanyRegistrationResponse response =
+                companyService.createCompany(request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(
-                        companyService.createCompany(request)
+                        ApiResponse.success(
+                                "Company created successfully",
+                                response
+                        )
                 );
     }
 
@@ -46,10 +54,16 @@ public class CompanyController {
      */
     @GetMapping("/me")
     @PreAuthorize("hasRole('COMPANY')")
-    public ResponseEntity<CompanyRegistrationResponse> getMyCompany() {
+    public ResponseEntity<ApiResponse<CompanyRegistrationResponse>> getMyCompany() {
+
+        CompanyRegistrationResponse response =
+                companyService.getMyCompany();
 
         return ResponseEntity.ok(
-                companyService.getMyCompany()
+                ApiResponse.success(
+                        "Company retrieved successfully",
+                        response
+                )
         );
     }
 
@@ -61,15 +75,21 @@ public class CompanyController {
             "hasRole('ADMIN') or " +
                     "@companySecurityService.isCompanyOwner(#companyId, authentication)"
     )
-    public ResponseEntity<CompanyRegistrationResponse> updateCompany(
+    public ResponseEntity<ApiResponse<CompanyRegistrationResponse>> updateCompany(
             @PathVariable Long companyId,
             @Valid @ModelAttribute CompanyUpdateRequest request
     ) {
 
-        return ResponseEntity.ok(
+        CompanyRegistrationResponse response =
                 companyService.updateCompany(
                         companyId,
                         request
+                );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Company updated successfully",
+                        response
                 )
         );
     }
@@ -79,30 +99,38 @@ public class CompanyController {
     // ============================================================
 
     @GetMapping("/{companyId}")
-    public ResponseEntity<CompanyRegistrationResponse> getCompany(
+    public ResponseEntity<ApiResponse<CompanyRegistrationResponse>> getCompany(
             @PathVariable Long companyId
     ) {
 
+        CompanyRegistrationResponse response =
+                companyService.getCompanyById(companyId);
+
         return ResponseEntity.ok(
-                companyService.getCompanyById(
-                        companyId
+                ApiResponse.success(
+                        "Company retrieved successfully",
+                        response
                 )
         );
     }
 
-        @GetMapping("/active")
-    public ResponseEntity<Page<CompanyRegistrationResponse>>
+    @GetMapping("/active")
+    public ResponseEntity<ApiResponse<PageResponse<CompanyRegistrationResponse>>>
     getActiveCompanies(
-            @RequestParam(
-                    required = false
-            ) String search,
+            @RequestParam(required = false) String search,
             Pageable pageable
     ) {
 
-        return ResponseEntity.ok(
+        Page<CompanyRegistrationResponse> companies =
                 companyService.getActiveCompanies(
                         search,
                         pageable
+                );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Active companies retrieved successfully",
+                        PageResponse.of(companies)
                 )
         );
     }
@@ -116,18 +144,22 @@ public class CompanyController {
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<CompanyRegistrationResponse>>
+    public ResponseEntity<ApiResponse<PageResponse<CompanyRegistrationResponse>>>
     getAllCompanies(
-            @RequestParam(
-                    required = false
-            ) String search,
+            @RequestParam(required = false) String search,
             Pageable pageable
     ) {
 
-        return ResponseEntity.ok(
+        Page<CompanyRegistrationResponse> companies =
                 companyService.getAllCompanies(
                         search,
                         pageable
+                );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Companies retrieved successfully",
+                        PageResponse.of(companies)
                 )
         );
     }
@@ -137,16 +169,22 @@ public class CompanyController {
      */
     @PatchMapping("/{companyId}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CompanyRegistrationResponse>
+    public ResponseEntity<ApiResponse<CompanyRegistrationResponse>>
     updateStatus(
             @PathVariable Long companyId,
             @Valid @RequestBody CompanyStatusUpdateRequest request
     ) {
 
-        return ResponseEntity.ok(
+        CompanyRegistrationResponse response =
                 companyService.updateCompanyStatus(
                         companyId,
                         request.getStatus()
+                );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Company status updated successfully",
+                        response
                 )
         );
     }
@@ -156,14 +194,16 @@ public class CompanyController {
      */
     @DeleteMapping("/{companyId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteCompany(
+    public ResponseEntity<ApiResponse<Void>> deleteCompany(
             @PathVariable Long companyId
     ) {
 
-        companyService.deleteCompany(
-                companyId
-        );
+        companyService.deleteCompany(companyId);
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Company deleted successfully"
+                )
+        );
     }
 }

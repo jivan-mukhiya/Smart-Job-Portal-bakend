@@ -23,7 +23,7 @@ public class StaticResourceConfig implements WebMvcConfigurer {
                 .addResourceLocations("file:" + uploadDir + "/company/")
                 .setCachePeriod(3600);
 
-        // Serve job seeker images
+        // Serve job seeker files (including resumes) - UPDATED
         registry.addResourceHandler("/files/jobseeker/**")
                 .addResourceLocations("file:" + uploadDir + "/jobseeker/")
                 .setCachePeriod(3600);

@@ -19,14 +19,31 @@ public class FileStorageConfig {
     private String uploadDir = "uploads";
 
     /**
-     * Allowed file types
+     * Allowed file types (images)
      */
-    private List<String> allowedTypes = List.of("image/jpeg", "image/jpg", "image/png", "image/webp");
+    private List<String> allowedTypes = List.of(
+            "image/jpeg",
+            "image/jpg",
+            "image/png",
+            "image/webp"
+    );
+
+    /**
+     * Allowed resume types (PDF ONLY)
+     */
+    private List<String> allowedResumeTypes = List.of(
+            "application/pdf"
+    );
 
     /**
      * Maximum image size in bytes (5MB default)
      */
     private long maxImageSize = 5 * 1024 * 1024; // 5MB
+
+    /**
+     * Maximum resume size in bytes (5MB default)
+     */
+    private long maxResumeSize = 5 * 1024 * 1024; // 5MB
 
     /**
      * Maximum file size for any file (10MB default)
@@ -37,58 +54,34 @@ public class FileStorageConfig {
     // Directory Paths
     // =============================================================
 
-    /**
-     * Get company logo directory
-     */
     public String getCompanyLogoDir() {
         return uploadDir + "/company/logo";
     }
 
-    /**
-     * Get company banner directory
-     */
     public String getCompanyBannerDir() {
         return uploadDir + "/company/banner";
     }
 
-    /**
-     * Get job seeker profile image directory
-     */
     public String getJobSeekerProfileDir() {
         return uploadDir + "/jobseeker/profile";
     }
 
-    /**
-     * Get job seeker resume directory
-     */
     public String getJobSeekerResumeDir() {
         return uploadDir + "/jobseeker/resume";
     }
 
-    /**
-     * Get job seeker cover letter directory
-     */
     public String getJobSeekerCoverLetterDir() {
         return uploadDir + "/jobseeker/cover-letter";
     }
 
-    /**
-     * Get job post attachments directory
-     */
     public String getJobAttachmentsDir() {
         return uploadDir + "/job/attachments";
     }
 
-    /**
-     * Get generic upload directory
-     */
     public String getGenericDir(String subDirectory) {
         return uploadDir + "/" + subDirectory;
     }
 
-    /**
-     * Get full path for any subdirectory
-     */
     public String getFullPath(String... paths) {
         return String.join("/", uploadDir, String.join("/", paths));
     }

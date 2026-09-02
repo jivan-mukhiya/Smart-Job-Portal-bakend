@@ -52,6 +52,23 @@ public class FileStorageServiceImpl implements FileStorageService {
     );
 
     // =============================================================
+    // ALLOWED RESUME TYPES
+    // PDF ONLY
+    // =============================================================
+
+    private static final Set<String> ALLOWED_RESUME_EXTENSIONS = new HashSet<>(
+            Arrays.asList(
+                    "pdf"
+            )
+    );
+
+    private static final Set<String> ALLOWED_RESUME_CONTENT_TYPES = new HashSet<>(
+            Arrays.asList(
+                    "application/pdf"
+            )
+    );
+
+    // =============================================================
     // 1. COMPANY FILE METHODS
     // =============================================================
 
@@ -140,6 +157,10 @@ public class FileStorageServiceImpl implements FileStorageService {
         );
     }
 
+    // =============================================================
+    // RESUME
+    // =============================================================
+
     @Override
     public String storeJobSeekerResume(
             MultipartFile file,
@@ -153,6 +174,18 @@ public class FileStorageServiceImpl implements FileStorageService {
 
         String directory = fileStorageConfig.getJobSeekerResumeDir();
 
+        /*
+         * IMPORTANT:
+         *
+         * Do NOT call validateFile() here.
+         *
+         * Resume uses validateResume() because resume
+         * is PDF only.
+         *
+         * storeFileInternal() will automatically call
+         * validateResume() when type = "resume".
+         */
+
         return storeFileInternal(
                 file,
                 directory,
@@ -161,6 +194,10 @@ public class FileStorageServiceImpl implements FileStorageService {
                 "resume"
         );
     }
+
+    // =============================================================
+    // COVER LETTER
+    // =============================================================
 
     @Override
     public String storeJobSeekerCoverLetter(
@@ -334,15 +371,34 @@ public class FileStorageServiceImpl implements FileStorageService {
             String type
     ) throws IOException {
 
-        // ---------------------------------------------------------
-        // Validate file
-        // ---------------------------------------------------------
+        // =========================================================
+        // VALIDATE FILE BASED ON TYPE
+        // =========================================================
 
-        validateFile(file);
+        /*
+         * Resume:
+         *     PDF only
+         *
+         * Everything else:
+         *     JPG/JPEG/PNG/WEBP
+         */
 
-        // ---------------------------------------------------------
-        // Get original filename
-        // ---------------------------------------------------------
+        if ("resume".equalsIgnoreCase(type)) {
+
+            log.debug("Using resume validation for file");
+
+            validateResume(file);
+
+        } else {
+
+            log.debug("Using normal image/file validation");
+
+            validateFile(file);
+        }
+
+        // =========================================================
+        // GET ORIGINAL FILE NAME
+        // =========================================================
 
         String originalFileName = file.getOriginalFilename();
 
@@ -355,9 +411,9 @@ public class FileStorageServiceImpl implements FileStorageService {
             );
         }
 
-        // ---------------------------------------------------------
-        // Create upload directory
-        // ---------------------------------------------------------
+        // =========================================================
+        // CREATE UPLOAD DIRECTORY
+        // =========================================================
 
         Path uploadPath = Paths.get(directory);
 
@@ -371,9 +427,9 @@ public class FileStorageServiceImpl implements FileStorageService {
             );
         }
 
-        // ---------------------------------------------------------
-        // Generate safe filename
-        // ---------------------------------------------------------
+        // =========================================================
+        // GENERATE SAFE FILE NAME
+        // =========================================================
 
         String fileName = generateFileName(
                 originalFileName,
@@ -390,15 +446,15 @@ public class FileStorageServiceImpl implements FileStorageService {
                         + "_"
                         + fileName;
 
-        // ---------------------------------------------------------
-        // Resolve file path
-        // ---------------------------------------------------------
+        // =========================================================
+        // RESOLVE FILE PATH
+        // =========================================================
 
         Path filePath = uploadPath.resolve(fullFileName);
 
-        // ---------------------------------------------------------
-        // Save file
-        // ---------------------------------------------------------
+        // =========================================================
+        // SAVE FILE
+        // =========================================================
 
         Files.copy(
                 file.getInputStream(),
@@ -411,13 +467,18 @@ public class FileStorageServiceImpl implements FileStorageService {
                 filePath.toAbsolutePath()
         );
 
-        // ---------------------------------------------------------
-        // Return relative path
-        // ---------------------------------------------------------
+        // =========================================================
+        // RETURN RELATIVE PATH
+        // =========================================================
 
         String uploadDir = fileStorageConfig.getUploadDir();
 
-        return "/" + uploadDir + "/" + directory + "/" + fullFileName;
+        return "/"
+                + uploadDir
+                + "/"
+                + directory
+                + "/"
+                + fullFileName;
     }
 
     // =============================================================
@@ -436,8 +497,8 @@ public class FileStorageServiceImpl implements FileStorageService {
                 return false;
             }
 
-            // Remove leading slash
             if (filePath.startsWith("/")) {
+
                 filePath = filePath.substring(1);
             }
 
@@ -521,15 +582,11 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     // =============================================================
-    // 7. FILE VALIDATION
+    // 7. FILE VALIDATION - IMAGES
     // =============================================================
 
     @Override
     public void validateFile(MultipartFile file) {
-
-        // ---------------------------------------------------------
-        // Check null / empty
-        // ---------------------------------------------------------
 
         if (file == null || file.isEmpty()) {
 
@@ -539,10 +596,6 @@ public class FileStorageServiceImpl implements FileStorageService {
                     ErrorCode.FILE_REQUIRED
             );
         }
-
-        // ---------------------------------------------------------
-        // Validate file type
-        // ---------------------------------------------------------
 
         if (!isValidFileType(file)) {
 
@@ -556,10 +609,6 @@ public class FileStorageServiceImpl implements FileStorageService {
                     ErrorCode.INVALID_FILE_TYPE
             );
         }
-
-        // ---------------------------------------------------------
-        // Validate file size
-        // ---------------------------------------------------------
 
         if (!isValidFileSize(file)) {
 
@@ -575,7 +624,7 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     // =============================================================
-    // 8. FILE TYPE VALIDATION
+    // IMAGE TYPE VALIDATION
     // =============================================================
 
     @Override
@@ -585,19 +634,14 @@ public class FileStorageServiceImpl implements FileStorageService {
             return false;
         }
 
-        // ---------------------------------------------------------
-        // Content type sent by browser/Postman
-        // ---------------------------------------------------------
-
         String contentType = file.getContentType();
 
         if (StringUtils.hasText(contentType)) {
-            contentType = contentType.toLowerCase().trim();
-        }
 
-        // ---------------------------------------------------------
-        // Get file extension
-        // ---------------------------------------------------------
+            contentType = contentType
+                    .toLowerCase()
+                    .trim();
+        }
 
         String extension = getFileExtension(
                 file.getOriginalFilename()
@@ -611,10 +655,6 @@ public class FileStorageServiceImpl implements FileStorageService {
                     .trim();
         }
 
-        // ---------------------------------------------------------
-        // Log detected values
-        // ---------------------------------------------------------
-
         log.debug(
                 "Validating file. Filename: {}, Content-Type: {}, Extension: {}",
                 file.getOriginalFilename(),
@@ -622,9 +662,9 @@ public class FileStorageServiceImpl implements FileStorageService {
                 extension
         );
 
-        // ---------------------------------------------------------
-        // 1. Normal Content-Type validation
-        // ---------------------------------------------------------
+        // =========================================================
+        // CHECK IMAGE CONTENT TYPE
+        // =========================================================
 
         if (StringUtils.hasText(contentType)
                 && ALLOWED_IMAGE_CONTENT_TYPES.contains(contentType)) {
@@ -637,9 +677,9 @@ public class FileStorageServiceImpl implements FileStorageService {
             return true;
         }
 
-        // ---------------------------------------------------------
-        // 2. Check configured allowed types
-        // ---------------------------------------------------------
+        // =========================================================
+        // CHECK CONFIGURED CONTENT TYPES
+        // =========================================================
 
         if (StringUtils.hasText(contentType)
                 && fileStorageConfig.getAllowedTypes() != null
@@ -653,46 +693,37 @@ public class FileStorageServiceImpl implements FileStorageService {
             return true;
         }
 
-        // ---------------------------------------------------------
-        // 3. FALLBACK:
-        // application/octet-stream
-        //
-        // Some browsers, Postman, proxies, or clients can send
-        // application/octet-stream even for valid image files.
-        // In that case we check the file extension.
-        // ---------------------------------------------------------
+        // =========================================================
+        // APPLICATION/OCTET-STREAM FALLBACK
+        // =========================================================
 
         if ("application/octet-stream".equals(contentType)
                 && ALLOWED_IMAGE_EXTENSIONS.contains(extension)) {
 
             log.warn(
-                    "Content-Type is application/octet-stream. " +
-                            "Accepting file based on extension: {}",
+                    "Content-Type is application/octet-stream. "
+                            + "Accepting file based on extension: {}",
                     extension
             );
 
             return true;
         }
 
-        // ---------------------------------------------------------
-        // 4. Extension fallback for missing/unknown Content-Type
-        // ---------------------------------------------------------
+        // =========================================================
+        // MISSING CONTENT-TYPE FALLBACK
+        // =========================================================
 
         if (!StringUtils.hasText(contentType)
                 && ALLOWED_IMAGE_EXTENSIONS.contains(extension)) {
 
             log.warn(
-                    "Content-Type is missing. " +
-                            "Accepting file based on extension: {}",
+                    "Content-Type is missing. "
+                            + "Accepting file based on extension: {}",
                     extension
             );
 
             return true;
         }
-
-        // ---------------------------------------------------------
-        // Invalid file
-        // ---------------------------------------------------------
 
         log.error(
                 "File type rejected. Content-Type: {}, Extension: {}, Filename: {}",
@@ -705,7 +736,7 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     // =============================================================
-    // 9. FILE SIZE VALIDATION
+    // IMAGE SIZE VALIDATION
     // =============================================================
 
     @Override
@@ -723,7 +754,198 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     // =============================================================
-    // 10. FILE UTILITY METHODS
+    // 8. RESUME VALIDATION
+    // PDF ONLY
+    // =============================================================
+
+    @Override
+    public boolean isValidResumeType(MultipartFile file) {
+
+        if (file == null || file.isEmpty()) {
+            return false;
+        }
+
+        String contentType = file.getContentType();
+
+        if (StringUtils.hasText(contentType)) {
+
+            contentType = contentType
+                    .toLowerCase()
+                    .trim();
+        }
+
+        String extension = getFileExtension(
+                file.getOriginalFilename()
+        );
+
+        if (StringUtils.hasText(extension)) {
+
+            extension = extension
+                    .replace(".", "")
+                    .toLowerCase()
+                    .trim();
+        }
+
+        log.debug(
+                "Validating resume. Filename: {}, Content-Type: {}, Extension: {}",
+                file.getOriginalFilename(),
+                contentType,
+                extension
+        );
+
+        // =========================================================
+        // CHECK PDF CONTENT TYPE
+        // =========================================================
+
+        if (StringUtils.hasText(contentType)
+                && ALLOWED_RESUME_CONTENT_TYPES.contains(contentType)) {
+
+            log.debug(
+                    "Resume accepted by Content-Type: {}",
+                    contentType
+            );
+
+            return true;
+        }
+
+        // =========================================================
+        // CHECK CONFIGURED RESUME TYPES
+        // =========================================================
+
+        if (StringUtils.hasText(contentType)
+                && fileStorageConfig.getAllowedResumeTypes() != null
+                && fileStorageConfig.getAllowedResumeTypes().contains(contentType)) {
+
+            log.debug(
+                    "Resume accepted by configured Content-Type: {}",
+                    contentType
+            );
+
+            return true;
+        }
+
+        // =========================================================
+        // APPLICATION/OCTET-STREAM FALLBACK
+        // =========================================================
+
+        if ("application/octet-stream".equals(contentType)
+                && ALLOWED_RESUME_EXTENSIONS.contains(extension)) {
+
+            log.warn(
+                    "Content-Type is application/octet-stream. "
+                            + "Accepting resume based on extension: {}",
+                    extension
+            );
+
+            return true;
+        }
+
+        // =========================================================
+        // MISSING CONTENT-TYPE FALLBACK
+        // =========================================================
+
+        if (!StringUtils.hasText(contentType)
+                && ALLOWED_RESUME_EXTENSIONS.contains(extension)) {
+
+            log.warn(
+                    "Content-Type is missing. "
+                            + "Accepting resume based on extension: {}",
+                    extension
+            );
+
+            return true;
+        }
+
+        log.error(
+                "Resume type rejected. Content-Type: {}, Extension: {}, Filename: {}",
+                contentType,
+                extension,
+                file.getOriginalFilename()
+        );
+
+        return false;
+    }
+
+    // =============================================================
+    // RESUME SIZE VALIDATION
+    // =============================================================
+
+    @Override
+    public boolean isValidResumeSize(MultipartFile file) {
+
+        if (file == null) {
+            return false;
+        }
+
+        long fileSize = file.getSize();
+
+        long maxSize = fileStorageConfig.getMaxResumeSize();
+
+        return fileSize <= maxSize;
+    }
+
+    // =============================================================
+    // COMPLETE RESUME VALIDATION
+    // =============================================================
+
+    @Override
+    public void validateResume(MultipartFile file) {
+
+        if (file == null || file.isEmpty()) {
+
+            log.error(
+                    "Resume file is null or empty"
+            );
+
+            throw new BusinessException(
+                    ErrorCode.FILE_REQUIRED
+            );
+        }
+
+        // =========================================================
+        // PDF TYPE CHECK
+        // =========================================================
+
+        if (!isValidResumeType(file)) {
+
+            log.error(
+                    "Invalid resume type. "
+                            + "Only PDF files are allowed. "
+                            + "Content-Type: {}, Filename: {}",
+                    file.getContentType(),
+                    file.getOriginalFilename()
+            );
+
+            throw new BusinessException(
+                    ErrorCode.INVALID_FILE_TYPE,
+                    "Only PDF files are allowed for resume"
+            );
+        }
+
+        // =========================================================
+        // RESUME SIZE CHECK
+        // =========================================================
+
+        if (!isValidResumeSize(file)) {
+
+            log.error(
+                    "Resume too large: {} bytes (Max: {} bytes)",
+                    file.getSize(),
+                    fileStorageConfig.getMaxResumeSize()
+            );
+
+            throw new BusinessException(
+                    ErrorCode.FILE_TOO_LARGE,
+                    "Resume file size exceeds the maximum limit of "
+                            + formatFileSize(
+                            fileStorageConfig.getMaxResumeSize()
+                    )
+            );
+        }
+    }
+
+    // =============================================================
+    // 9. FILE UTILITY METHODS
     // =============================================================
 
     @Override
@@ -733,9 +955,9 @@ public class FileStorageServiceImpl implements FileStorageService {
             return "0 B";
         }
 
-        long sizeInBytes = file.getSize();
-
-        return formatFileSize(sizeInBytes);
+        return formatFileSize(
+                file.getSize()
+        );
     }
 
     @Override
@@ -748,6 +970,10 @@ public class FileStorageServiceImpl implements FileStorageService {
         return file.getSize();
     }
 
+    // =============================================================
+    // GET FILE EXTENSION
+    // =============================================================
+
     @Override
     public String getFileExtension(String fileName) {
 
@@ -756,7 +982,8 @@ public class FileStorageServiceImpl implements FileStorageService {
         }
 
         // Remove path information if client sends it
-        fileName = Paths.get(fileName)
+        fileName = Paths
+                .get(fileName)
                 .getFileName()
                 .toString();
 
@@ -766,8 +993,14 @@ public class FileStorageServiceImpl implements FileStorageService {
             return "";
         }
 
-        return fileName.substring(lastDotIndex);
+        return fileName.substring(
+                lastDotIndex
+        );
     }
+
+    // =============================================================
+    // GENERATE SAFE FILE NAME
+    // =============================================================
 
     @Override
     public String generateFileName(
@@ -799,6 +1032,10 @@ public class FileStorageServiceImpl implements FileStorageService {
                 + extension.toLowerCase();
     }
 
+    // =============================================================
+    // GET CONTENT TYPE
+    // =============================================================
+
     @Override
     public String getContentType(MultipartFile file) {
 
@@ -809,6 +1046,10 @@ public class FileStorageServiceImpl implements FileStorageService {
         return file.getContentType();
     }
 
+    // =============================================================
+    // FILE EXISTS
+    // =============================================================
+
     @Override
     public boolean fileExists(String filePath) {
 
@@ -817,6 +1058,7 @@ public class FileStorageServiceImpl implements FileStorageService {
         }
 
         if (filePath.startsWith("/")) {
+
             filePath = filePath.substring(1);
         }
 
@@ -829,7 +1071,7 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     // =============================================================
-    // 11. PRIVATE HELPER METHODS
+    // 10. PRIVATE HELPER METHODS
     // =============================================================
 
     private String formatFileSize(long sizeInBytes) {

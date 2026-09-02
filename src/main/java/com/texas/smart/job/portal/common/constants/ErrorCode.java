@@ -86,8 +86,12 @@ public enum ErrorCode {
     // =========================
     // Company
     // =========================
-    INVALID_COMPANY_STATUS("COMPANY_0016",
-            "Company Status not valid"),
+
+    INVALID_COMPANY_STATUS(
+            "COMPANY_016",
+            "Company Status not valid"
+    ),
+
     COMPANY_NOT_FOUND(
             "COMPANY_001",
             "Company not found"
@@ -256,7 +260,7 @@ public enum ErrorCode {
 
     INVALID_FILE_TYPE(
             "FILE_002",
-            "Invalid file type"
+            "Invalid file type. Only PDF, JPEG, PNG and WEBP are allowed."
     ),
 
     FILE_TOO_LARGE(
@@ -287,6 +291,93 @@ public enum ErrorCode {
     FILE_ALREADY_EXISTS(
             "FILE_008",
             "File already exists"
+    ),
+
+    // =========================
+    // File - Resume Specific
+    // =========================
+
+    RESUME_FILE_REQUIRED(
+            "FILE_009",
+            "Resume file is required"
+    ),
+
+    INVALID_RESUME_TYPE(
+            "FILE_010",
+            "Invalid resume type. Only PDF files are allowed."
+    ),
+
+    RESUME_FILE_TOO_LARGE(
+            "FILE_011",
+            "Resume file size exceeds the allowed limit (Max: 5MB)"
+    ),
+
+    // =========================
+    // File - Image Specific
+    // =========================
+
+    INVALID_IMAGE_TYPE(
+            "FILE_012",
+            "Invalid image type. Only JPEG, PNG and WEBP are allowed."
+    ),
+
+    IMAGE_FILE_TOO_LARGE(
+            "FILE_013",
+            "Image file size exceeds the allowed limit (Max: 5MB)"
+    ),
+
+    // =========================
+    // Job Seeker
+    // =========================
+
+    JOB_SEEKER_NOT_FOUND(
+            "JOBSEEKER_001",
+            "Job seeker not found"
+    ),
+
+    JOB_SEEKER_ALREADY_EXISTS(
+            "JOBSEEKER_002",
+            "Job seeker already exists"
+    ),
+
+    JOB_SEEKER_EMAIL_ALREADY_EXISTS(
+            "JOBSEEKER_003",
+            "Job seeker email already exists"
+    ),
+
+    INVALID_YEARS_OF_EXPERIENCE(
+            "JOBSEEKER_004",
+            "Invalid years of experience"
+    ),
+
+    EDUCATION_REQUIRED(
+            "JOBSEEKER_005",
+            "Highest education is required"
+    ),
+
+    SKILL_REQUIRED(
+            "JOBSEEKER_006",
+            "At least one skill is required"
+    ),
+
+    SKILL_ALREADY_EXISTS(
+            "JOBSEEKER_007",
+            "Skill already exists"
+    ),
+
+    SKILL_NOT_FOUND(
+            "JOBSEEKER_008",
+            "Skill not found"
+    ),
+
+    SOCIAL_PROFILE_NOT_FOUND(
+            "JOBSEEKER_009",
+            "Social profile not found"
+    ),
+
+    SOCIAL_PROFILE_ALREADY_EXISTS(
+            "JOBSEEKER_010",
+            "Social profile already exists for this platform"
     ),
 
     // =========================
