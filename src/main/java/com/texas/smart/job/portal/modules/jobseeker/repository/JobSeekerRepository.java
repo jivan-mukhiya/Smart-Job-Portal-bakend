@@ -15,6 +15,7 @@ public interface JobSeekerRepository
     // =============================================================
     // FIND BY USER
     // =============================================================
+    Optional<JobSeeker> findByUser_Email(String email);
 
     Optional<JobSeeker> findByUserId(Long userId);
 
