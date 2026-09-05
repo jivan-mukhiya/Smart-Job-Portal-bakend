@@ -104,7 +104,7 @@ public class JobResponse {
     private Integer applicationCount;
 
     // =============================================================
-    // Flags
+    // Computed Flags
     // =============================================================
 
     private Boolean expired;
@@ -120,7 +120,4 @@ public class JobResponse {
 
     @Builder.Default
     private List<JobBenefitResponse> benefits = new ArrayList<>();
-
-    @Builder.Default
-    private List<JobAttachmentResponse> attachments = new ArrayList<>();
 }

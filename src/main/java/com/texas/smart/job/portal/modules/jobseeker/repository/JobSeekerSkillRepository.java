@@ -7,6 +7,8 @@ import java.util.List;
 
 public interface JobSeekerSkillRepository
         extends JpaRepository<JobSeekerSkill, Long> {
+    void deleteAllByJobSeekerId(Long jobSeekerId);
+
 
     // =============================================================
     // FIND BY JOB SEEKER
@@ -16,13 +18,11 @@ public interface JobSeekerSkillRepository
             Long jobSeekerId
     );
 
-
     // =============================================================
     // DELETE ALL SKILLS
     // =============================================================
 
     void deleteByJobSeekerId(Long jobSeekerId);
-
 
     // =============================================================
     // EXISTS
@@ -33,9 +33,8 @@ public interface JobSeekerSkillRepository
             String skillName
     );
 
-
     // =============================================================
-    // FIND SPECIFIC SKILL
+    // FIND ACTIVE SKILLS
     // =============================================================
 
     List<JobSeekerSkill> findByJobSeekerIdAndActiveTrueOrderByDisplayOrderAsc(

@@ -2,36 +2,54 @@ package com.texas.smart.job.portal.modules.company.service.impl;
 
 import com.texas.smart.job.portal.common.constants.ErrorCode;
 import com.texas.smart.job.portal.common.enums.CompanyStatus;
+import com.texas.smart.job.portal.common.enums.JobStatus;
 import com.texas.smart.job.portal.common.enums.Role;
 import com.texas.smart.job.portal.common.enums.SocialPlatform;
 import com.texas.smart.job.portal.common.exceptions.custom.BusinessException;
 import com.texas.smart.job.portal.common.service.FileStorageService;
+
+import com.texas.smart.job.portal.modules.application.repository.JobApplicationRepository;
+
 import com.texas.smart.job.portal.modules.auth.entity.User;
 import com.texas.smart.job.portal.modules.auth.repository.UserRepository;
+
 import com.texas.smart.job.portal.modules.company.dto.request.CompanyRegistrationRequest;
 import com.texas.smart.job.portal.modules.company.dto.request.CompanyUpdateRequest;
 import com.texas.smart.job.portal.modules.company.dto.request.SocialLinkRequest;
+
 import com.texas.smart.job.portal.modules.company.dto.response.CompanyRegistrationResponse;
+
 import com.texas.smart.job.portal.modules.company.entity.Company;
 import com.texas.smart.job.portal.modules.company.entity.CompanyAddress;
 import com.texas.smart.job.portal.modules.company.entity.CompanyImages;
 import com.texas.smart.job.portal.modules.company.entity.CompanyStatistics;
 import com.texas.smart.job.portal.modules.company.entity.SocialLink;
+
 import com.texas.smart.job.portal.modules.company.mapper.CompanyMapper;
+
 import com.texas.smart.job.portal.modules.company.repository.CompanyAddressRepository;
 import com.texas.smart.job.portal.modules.company.repository.CompanyImagesRepository;
 import com.texas.smart.job.portal.modules.company.repository.CompanyRepository;
 import com.texas.smart.job.portal.modules.company.repository.CompanyStatisticsRepository;
 import com.texas.smart.job.portal.modules.company.repository.SocialLinkRepository;
+
 import com.texas.smart.job.portal.modules.company.service.CompanyService;
+
+import com.texas.smart.job.portal.modules.job.repository.JobRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.stereotype.Service;
+
 import org.springframework.transaction.annotation.Transactional;
+
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
@@ -40,17 +58,27 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class CompanyServiceImpl implements CompanyService {
+public class CompanyServiceImpl
+        implements CompanyService {
 
     private final CompanyRepository companyRepository;
+
     private final CompanyAddressRepository addressRepository;
+
     private final CompanyImagesRepository imagesRepository;
+
     private final SocialLinkRepository socialLinkRepository;
+
     private final CompanyStatisticsRepository statisticsRepository;
+
+    private final JobRepository jobRepository;
+
+    private final JobApplicationRepository jobApplicationRepository;
 
     private final UserRepository userRepository;
 
     private final FileStorageService fileStorageService;
+
     private final CompanyMapper companyMapper;
 
 
@@ -77,15 +105,17 @@ public class CompanyServiceImpl implements CompanyService {
             );
         }
 
-        String loggedInEmail = authentication.getName();
+        String loggedInEmail =
+                authentication.getName();
 
-        User user = userRepository
-                .findByEmail(loggedInEmail)
-                .orElseThrow(() ->
-                        new BusinessException(
-                                ErrorCode.USER_NOT_FOUND
-                        )
-                );
+        User user =
+                userRepository
+                        .findByEmail(loggedInEmail)
+                        .orElseThrow(() ->
+                                new BusinessException(
+                                        ErrorCode.USER_NOT_FOUND
+                                )
+                        );
 
         // Only COMPANY role can create company
         if (user.getRole() != Role.COMPANY) {
@@ -96,7 +126,9 @@ public class CompanyServiceImpl implements CompanyService {
         }
 
         // One user = one company
-        if (companyRepository.existsByUserId(user.getId())) {
+        if (companyRepository.existsByUserId(
+                user.getId()
+        )) {
 
             throw new BusinessException(
                     ErrorCode.COMPANY_ALREADY_EXISTS
@@ -129,20 +161,38 @@ public class CompanyServiceImpl implements CompanyService {
             // COMPANY
             // ====================================================
 
-            Company company = Company.builder()
-                    .user(user)
-                    .companyName(request.getCompanyName())
-                    .companyEmail(request.getEmail())
-                    .phone(request.getPhone())
-                    .website(request.getWebsite())
-                    .description(request.getAboutUs())
-                    .industry(request.getIndustry())
-                    .status(CompanyStatus.PENDING)
-                    .approved(false)
-                    .active(true)
-                    .build();
+            Company company =
+                    Company.builder()
+                            .user(user)
+                            .companyName(
+                                    request.getCompanyName()
+                            )
+                            .companyEmail(
+                                    request.getEmail()
+                            )
+                            .phone(
+                                    request.getPhone()
+                            )
+                            .website(
+                                    request.getWebsite()
+                            )
+                            .description(
+                                    request.getAboutUs()
+                            )
+                            .industry(
+                                    request.getIndustry()
+                            )
+                            .status(
+                                    CompanyStatus.PENDING
+                            )
+                            .approved(false)
+                            .active(true)
+                            .build();
 
-            company = companyRepository.save(company);
+            company =
+                    companyRepository.save(
+                            company
+                    );
 
 
             // ====================================================
@@ -157,9 +207,15 @@ public class CompanyServiceImpl implements CompanyService {
                                 .streetAddress(
                                         request.getAddressLine()
                                 )
-                                .city(request.getCity())
-                                .state(request.getState())
-                                .country(request.getCountry())
+                                .city(
+                                        request.getCity()
+                                )
+                                .state(
+                                        request.getState()
+                                )
+                                .country(
+                                        request.getCountry()
+                                )
                                 .postalCode(
                                         request.getPostalCode()
                                 )
@@ -216,7 +272,9 @@ public class CompanyServiceImpl implements CompanyService {
                                 company.getId()
                         );
 
-                images.setBannerPath(bannerPath);
+                images.setBannerPath(
+                        bannerPath
+                );
 
                 images.setBannerFileName(
                         request.getBannerFile()
@@ -256,9 +314,13 @@ public class CompanyServiceImpl implements CompanyService {
                             .averageRating(0.0)
                             .build();
 
-            statisticsRepository.save(statistics);
+            statisticsRepository.save(
+                    statistics
+            );
 
-            company.setStatistics(statistics);
+            company.setStatistics(
+                    statistics
+            );
 
 
             // ====================================================
@@ -277,7 +339,9 @@ public class CompanyServiceImpl implements CompanyService {
                     user.getEmail()
             );
 
-            return companyMapper.toResponse(company);
+            return companyMapper.toResponse(
+                    company
+            );
 
         } catch (IOException e) {
 
@@ -305,7 +369,9 @@ public class CompanyServiceImpl implements CompanyService {
     ) {
 
         Company company =
-                getCompanyEntityById(companyId);
+                getCompanyEntityById(
+                        companyId
+                );
 
 
         // ========================================================
@@ -461,14 +527,18 @@ public class CompanyServiceImpl implements CompanyService {
         // SAVE COMPANY
         // ========================================================
 
-        companyRepository.save(company);
+        companyRepository.save(
+                company
+        );
 
         log.info(
                 "Company updated successfully. id={}",
                 companyId
         );
 
-        return companyMapper.toResponse(company);
+        return companyMapper.toResponse(
+                company
+        );
     }
 
 
@@ -543,9 +613,13 @@ public class CompanyServiceImpl implements CompanyService {
         }
 
 
-        addressRepository.save(address);
+        addressRepository.save(
+                address
+        );
 
-        company.setAddress(address);
+        company.setAddress(
+                address
+        );
     }
 
 
@@ -609,7 +683,9 @@ public class CompanyServiceImpl implements CompanyService {
                                 company.getId()
                         );
 
-                images.setLogoPath(path);
+                images.setLogoPath(
+                        path
+                );
 
                 images.setLogoFileName(
                         request.getLogoFile()
@@ -667,7 +743,9 @@ public class CompanyServiceImpl implements CompanyService {
                                 company.getId()
                         );
 
-                images.setBannerPath(path);
+                images.setBannerPath(
+                        path
+                );
 
                 images.setBannerFileName(
                         request.getBannerFile()
@@ -688,9 +766,13 @@ public class CompanyServiceImpl implements CompanyService {
             }
 
 
-            imagesRepository.save(images);
+            imagesRepository.save(
+                    images
+            );
 
-            company.setImages(images);
+            company.setImages(
+                    images
+            );
 
         } catch (IOException e) {
 
@@ -774,7 +856,9 @@ public class CompanyServiceImpl implements CompanyService {
                             .build();
 
 
-            company.addSocialLink(link);
+            company.addSocialLink(
+                    link
+            );
         }
     }
 
@@ -835,18 +919,21 @@ public class CompanyServiceImpl implements CompanyService {
             CompanyStatus status
     ) {
 
-        Company company =
-                getCompanyEntityById(companyId);
-
-        company.setStatus(status);
-
-
         if (status == null) {
 
             throw new BusinessException(
-                 ErrorCode.INVALID_COMPANY_STATUS
+                    ErrorCode.INVALID_COMPANY_STATUS
             );
         }
+
+        Company company =
+                getCompanyEntityById(
+                        companyId
+                );
+
+        company.setStatus(
+                status
+        );
 
 
         if (status == CompanyStatus.APPROVED) {
@@ -871,7 +958,9 @@ public class CompanyServiceImpl implements CompanyService {
         }
 
 
-        companyRepository.save(company);
+        companyRepository.save(
+                company
+        );
 
         log.info(
                 "Company status updated. id={}, status={}",
@@ -879,7 +968,9 @@ public class CompanyServiceImpl implements CompanyService {
                 status
         );
 
-        return companyMapper.toResponse(company);
+        return companyMapper.toResponse(
+                company
+        );
     }
 
 
@@ -904,20 +995,6 @@ public class CompanyServiceImpl implements CompanyService {
          *
          * A bulk DELETE bypasses Hibernate cascade and
          * orphanRemoval.
-         *
-         * Your Company entity already has:
-         *
-         * cascade = CascadeType.ALL
-         * orphanRemoval = true
-         *
-         * for:
-         *
-         * - CompanyAddress
-         * - CompanyImages
-         * - CompanyStatistics
-         * - SocialLink
-         *
-         * Therefore we should delete the managed Company entity.
          */
 
         Company company =
@@ -963,25 +1040,9 @@ public class CompanyServiceImpl implements CompanyService {
         // DELETE COMPANY
         // ========================================================
 
-        /*
-         * Hibernate will delete:
-         *
-         * social_links
-         * company_address
-         * company_images
-         * company_statistics
-         *
-         * because Company has CascadeType.ALL +
-         * orphanRemoval=true.
-         */
-
-        companyRepository.delete(company);
-
-
-        /*
-         * Force Hibernate to execute DELETE statements
-         * before the transaction completes.
-         */
+        companyRepository.delete(
+                company
+        );
 
         companyRepository.flush();
 
@@ -1005,7 +1066,9 @@ public class CompanyServiceImpl implements CompanyService {
 
         Company company =
                 companyRepository
-                        .findByIdWithAllDetails(companyId)
+                        .findByIdWithAllDetails(
+                                companyId
+                        )
                         .orElseThrow(() ->
                                 new BusinessException(
                                         ErrorCode.COMPANY_NOT_FOUND
@@ -1013,12 +1076,38 @@ public class CompanyServiceImpl implements CompanyService {
                         );
 
 
+        // ========================================================
+        // PROFILE VIEW
+        // ========================================================
+
         statisticsRepository.incrementProfileViews(
                 companyId
         );
 
 
-        return companyMapper.toResponse(company);
+        // ========================================================
+        // REFRESH CALCULATED STATISTICS
+        // ========================================================
+
+        refreshCompanyStatistics(
+                company
+        );
+
+
+        // ========================================================
+        // RELOAD STATISTICS
+        // ========================================================
+
+        statisticsRepository
+                .findByCompanyId(companyId)
+                .ifPresent(
+                        company::setStatistics
+                );
+
+
+        return companyMapper.toResponse(
+                company
+        );
     }
 
 
@@ -1041,7 +1130,9 @@ public class CompanyServiceImpl implements CompanyService {
                                 )
                         );
 
-        return companyMapper.toResponse(company);
+        return companyMapper.toResponse(
+                company
+        );
     }
 
 
@@ -1081,7 +1172,9 @@ public class CompanyServiceImpl implements CompanyService {
                         );
 
 
-        return companyMapper.toResponse(company);
+        return companyMapper.toResponse(
+                company
+        );
     }
 
 
@@ -1127,7 +1220,7 @@ public class CompanyServiceImpl implements CompanyService {
     // ============================================================
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Page<CompanyRegistrationResponse> getActiveCompanies(
             String search,
             Pageable pageable
@@ -1153,8 +1246,184 @@ public class CompanyServiceImpl implements CompanyService {
         }
 
 
-        return companies.map(
-                companyMapper::toResponse
+        return companies.map(company -> {
+
+            /*
+             * Calculate current statistics from the actual
+             * jobs and applications tables.
+             */
+            refreshCompanyStatistics(
+                    company
+            );
+
+            return companyMapper.toResponse(
+                    company
+            );
+        });
+    }
+
+
+    // ============================================================
+    // REFRESH COMPANY STATISTICS
+    // ============================================================
+
+    /**
+     * Recalculates company statistics from the source tables.
+     *
+     * Source of truth:
+     *
+     * jobs
+     * job_applications
+     *
+     * Stored counters:
+     *
+     * profileViews
+     * followers
+     *
+     * Calculated counters:
+     *
+     * activeJobs
+     * totalJobsPosted
+     * totalApplicants
+     *
+     * Rating remains stored until a review/rating module
+     * is implemented.
+     */
+    private void refreshCompanyStatistics(
+            Company company
+    ) {
+
+        if (company == null ||
+                company.getId() == null) {
+
+            return;
+        }
+
+        Long companyId =
+                company.getId();
+
+
+        // ========================================================
+        // GET OR CREATE STATISTICS
+        // ========================================================
+
+        CompanyStatistics statistics =
+                company.getStatistics();
+
+        if (statistics == null) {
+
+            statistics =
+                    statisticsRepository
+                            .findByCompanyId(
+                                    companyId
+                            )
+                            .orElseGet(() -> {
+
+                                CompanyStatistics newStatistics =
+                                        CompanyStatistics.builder()
+                                                .company(company)
+                                                .profileViews(0)
+                                                .followers(0)
+                                                .activeJobs(0)
+                                                .totalJobsPosted(0)
+                                                .totalApplicants(0)
+                                                .averageRating(0.0)
+                                                .build();
+
+                                return statisticsRepository.save(
+                                        newStatistics
+                                );
+                            });
+
+            company.setStatistics(
+                    statistics
+            );
+        }
+
+
+        // ========================================================
+        // TOTAL JOBS
+        // ========================================================
+
+        long totalJobs =
+                jobRepository.countByCompanyId(
+                        companyId
+                );
+
+        statistics.setTotalJobsPosted(
+                Math.toIntExact(
+                        totalJobs
+                )
+        );
+
+
+        // ========================================================
+        // ACTIVE JOBS
+        // ========================================================
+
+        long activeJobs =
+                jobRepository
+                        .countByCompanyIdAndStatusAndActiveTrue(
+                                companyId,
+                                JobStatus.ACTIVE
+                        );
+
+        statistics.setActiveJobs(
+                Math.toIntExact(
+                        activeJobs
+                )
+        );
+
+
+        // ========================================================
+        // TOTAL APPLICANTS
+        // ========================================================
+
+        long totalApplicants =
+                jobApplicationRepository
+                        .countByJobCompanyId(
+                                companyId
+                        );
+
+        statistics.setTotalApplicants(
+                Math.toIntExact(
+                        totalApplicants
+                )
+        );
+
+
+        // ========================================================
+        // NULL SAFETY
+        // ========================================================
+
+        if (statistics.getProfileViews() == null) {
+
+            statistics.setProfileViews(
+                    0
+            );
+        }
+
+        if (statistics.getFollowers() == null) {
+
+            statistics.setFollowers(
+                    0
+            );
+        }
+
+        if (statistics.getAverageRating() == null) {
+
+            statistics.setAverageRating(
+                    0.0
+            );
+        }
+
+
+        // ========================================================
+        // SAVE UPDATED STATISTICS
+        // ========================================================
+
+        statisticsRepository.save(
+                statistics
         );
     }
 

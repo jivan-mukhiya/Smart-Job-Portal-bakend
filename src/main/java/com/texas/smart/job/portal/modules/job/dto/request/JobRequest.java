@@ -100,14 +100,18 @@ public class JobRequest {
     )
     private String educationRequired;
 
-    @Positive(message = "Vacancies must be greater than zero")
+    @Positive(
+            message = "Vacancies must be greater than zero"
+    )
     private Integer vacancies;
 
     // =============================================================
     // Application
     // =============================================================
 
-    @Future(message = "Application deadline must be in the future")
+    @Future(
+            message = "Application deadline must be in the future"
+    )
     private LocalDateTime applicationDeadline;
 
     // =============================================================

@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public interface JobSeekerSocialProfileRepository
         extends JpaRepository<JobSeekerSocialProfile, Long> {
+    void deleteAllByJobSeekerId(Long jobSeekerId);
+
 
     // =============================================================
     // FIND BY JOB SEEKER

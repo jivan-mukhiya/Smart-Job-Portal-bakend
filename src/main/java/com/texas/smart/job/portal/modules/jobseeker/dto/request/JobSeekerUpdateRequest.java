@@ -8,7 +8,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -109,16 +108,24 @@ public class JobSeekerUpdateRequest {
     // Skills
     // =============================================================
 
-    @Builder.Default
-    private List<String> skills = new ArrayList<>();
+    /*
+     * null  -> skills field was not sent
+     * empty -> remove all skills
+     * values -> replace all existing skills
+     */
+    private List<String> skills;
 
 
     // =============================================================
     // Social Profiles
     // =============================================================
 
-    @Builder.Default
-    private List<SocialProfileRequest> socialProfiles = new ArrayList<>();
+    /*
+     * null  -> socialProfiles field was not sent
+     * empty -> remove all social profiles
+     * values -> replace all existing social profiles
+     */
+    private List<SocialProfileRequest> socialProfiles;
 
 
     // =============================================================
@@ -126,23 +133,26 @@ public class JobSeekerUpdateRequest {
     // =============================================================
 
     public boolean hasProfileImage() {
-        return profileImage != null && !profileImage.isEmpty();
+        return profileImage != null
+                && !profileImage.isEmpty();
     }
 
     public boolean hasResumeFile() {
-        return resumeFile != null && !resumeFile.isEmpty();
+        return resumeFile != null
+                && !resumeFile.isEmpty();
     }
 
     public boolean hasResumeUrl() {
-        return resumeUrl != null && !resumeUrl.isEmpty();
+        return resumeUrl != null
+                && !resumeUrl.trim().isEmpty();
     }
 
-    public boolean hasSkills() {
-        return skills != null && !skills.isEmpty();
+    public boolean hasSkillsField() {
+        return skills != null;
     }
 
-    public boolean hasSocialProfiles() {
-        return socialProfiles != null && !socialProfiles.isEmpty();
+    public boolean hasSocialProfilesField() {
+        return socialProfiles != null;
     }
 
     public boolean shouldRemoveProfileImage() {

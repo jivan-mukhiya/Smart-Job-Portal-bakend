@@ -73,11 +73,18 @@ public class FileStorageServiceImpl implements FileStorageService {
     // =============================================================
 
     @Override
-    public String storeCompanyLogo(MultipartFile file, Long companyId) throws IOException {
+    public String storeCompanyLogo(
+            MultipartFile file,
+            Long companyId
+    ) throws IOException {
 
-        log.info("Storing company logo for company: {}", companyId);
+        log.info(
+                "Storing company logo for company: {}",
+                companyId
+        );
 
-        String directory = fileStorageConfig.getCompanyLogoDir();
+        String directory =
+                fileStorageConfig.getCompanyLogoDir();
 
         return storeFileInternal(
                 file,
@@ -89,11 +96,18 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     @Override
-    public String storeCompanyBanner(MultipartFile file, Long companyId) throws IOException {
+    public String storeCompanyBanner(
+            MultipartFile file,
+            Long companyId
+    ) throws IOException {
 
-        log.info("Storing company banner for company: {}", companyId);
+        log.info(
+                "Storing company banner for company: {}",
+                companyId
+        );
 
-        String directory = fileStorageConfig.getCompanyBannerDir();
+        String directory =
+                fileStorageConfig.getCompanyBannerDir();
 
         return storeFileInternal(
                 file,
@@ -117,10 +131,11 @@ public class FileStorageServiceImpl implements FileStorageService {
                 companyId
         );
 
-        String directory = fileStorageConfig.getFullPath(
-                "company",
-                subDirectory
-        );
+        String directory =
+                fileStorageConfig.getFullPath(
+                        "company",
+                        subDirectory
+                );
 
         return storeFileInternal(
                 file,
@@ -146,7 +161,8 @@ public class FileStorageServiceImpl implements FileStorageService {
                 jobSeekerId
         );
 
-        String directory = fileStorageConfig.getJobSeekerProfileDir();
+        String directory =
+                fileStorageConfig.getJobSeekerProfileDir();
 
         return storeFileInternal(
                 file,
@@ -172,20 +188,13 @@ public class FileStorageServiceImpl implements FileStorageService {
                 jobSeekerId
         );
 
-        String directory = fileStorageConfig.getJobSeekerResumeDir();
+        String directory =
+                fileStorageConfig.getJobSeekerResumeDir();
 
         /*
-         * IMPORTANT:
-         *
-         * Do NOT call validateFile() here.
-         *
-         * Resume uses validateResume() because resume
-         * is PDF only.
-         *
-         * storeFileInternal() will automatically call
-         * validateResume() when type = "resume".
+         * Resume uses validateResume()
+         * because only PDF files are allowed.
          */
-
         return storeFileInternal(
                 file,
                 directory,
@@ -210,7 +219,8 @@ public class FileStorageServiceImpl implements FileStorageService {
                 jobSeekerId
         );
 
-        String directory = fileStorageConfig.getJobSeekerCoverLetterDir();
+        String directory =
+                fileStorageConfig.getJobSeekerCoverLetterDir();
 
         return storeFileInternal(
                 file,
@@ -234,10 +244,11 @@ public class FileStorageServiceImpl implements FileStorageService {
                 jobSeekerId
         );
 
-        String directory = fileStorageConfig.getFullPath(
-                "jobseeker",
-                subDirectory
-        );
+        String directory =
+                fileStorageConfig.getFullPath(
+                        "jobseeker",
+                        subDirectory
+                );
 
         return storeFileInternal(
                 file,
@@ -263,7 +274,8 @@ public class FileStorageServiceImpl implements FileStorageService {
                 jobId
         );
 
-        String directory = fileStorageConfig.getJobAttachmentsDir();
+        String directory =
+                fileStorageConfig.getJobAttachmentsDir();
 
         return storeFileInternal(
                 file,
@@ -287,10 +299,11 @@ public class FileStorageServiceImpl implements FileStorageService {
                 jobId
         );
 
-        String directory = fileStorageConfig.getFullPath(
-                "job",
-                subDirectory
-        );
+        String directory =
+                fileStorageConfig.getFullPath(
+                        "job",
+                        subDirectory
+                );
 
         return storeFileInternal(
                 file,
@@ -315,7 +328,9 @@ public class FileStorageServiceImpl implements FileStorageService {
 
         log.info(
                 "Storing file: {}, directory: {}, entity: {}",
-                file != null ? file.getOriginalFilename() : null,
+                file != null
+                        ? file.getOriginalFilename()
+                        : null,
                 directory,
                 entityId
         );
@@ -345,10 +360,11 @@ public class FileStorageServiceImpl implements FileStorageService {
                 entityId
         );
 
-        String directory = fileStorageConfig.getFullPath(
-                baseDirectory,
-                subDirectory
-        );
+        String directory =
+                fileStorageConfig.getFullPath(
+                        baseDirectory,
+                        subDirectory
+                );
 
         return storeFileInternal(
                 file,
@@ -372,26 +388,22 @@ public class FileStorageServiceImpl implements FileStorageService {
     ) throws IOException {
 
         // =========================================================
-        // VALIDATE FILE BASED ON TYPE
+        // VALIDATE FILE
         // =========================================================
-
-        /*
-         * Resume:
-         *     PDF only
-         *
-         * Everything else:
-         *     JPG/JPEG/PNG/WEBP
-         */
 
         if ("resume".equalsIgnoreCase(type)) {
 
-            log.debug("Using resume validation for file");
+            log.debug(
+                    "Using resume validation for file"
+            );
 
             validateResume(file);
 
         } else {
 
-            log.debug("Using normal image/file validation");
+            log.debug(
+                    "Using normal image/file validation"
+            );
 
             validateFile(file);
         }
@@ -400,11 +412,14 @@ public class FileStorageServiceImpl implements FileStorageService {
         // GET ORIGINAL FILE NAME
         // =========================================================
 
-        String originalFileName = file.getOriginalFilename();
+        String originalFileName =
+                file.getOriginalFilename();
 
         if (!StringUtils.hasText(originalFileName)) {
 
-            log.error("Original file name is missing");
+            log.error(
+                    "Original file name is missing"
+            );
 
             throw new BusinessException(
                     ErrorCode.INVALID_FILE_TYPE
@@ -415,7 +430,8 @@ public class FileStorageServiceImpl implements FileStorageService {
         // CREATE UPLOAD DIRECTORY
         // =========================================================
 
-        Path uploadPath = Paths.get(directory);
+        Path uploadPath =
+                Paths.get(directory);
 
         if (!Files.exists(uploadPath)) {
 
@@ -431,11 +447,12 @@ public class FileStorageServiceImpl implements FileStorageService {
         // GENERATE SAFE FILE NAME
         // =========================================================
 
-        String fileName = generateFileName(
-                originalFileName,
-                entityId,
-                type
-        );
+        String fileName =
+                generateFileName(
+                        originalFileName,
+                        entityId,
+                        type
+                );
 
         String fullFileName =
                 prefix
@@ -450,7 +467,8 @@ public class FileStorageServiceImpl implements FileStorageService {
         // RESOLVE FILE PATH
         // =========================================================
 
-        Path filePath = uploadPath.resolve(fullFileName);
+        Path filePath =
+                uploadPath.resolve(fullFileName);
 
         // =========================================================
         // SAVE FILE
@@ -468,15 +486,29 @@ public class FileStorageServiceImpl implements FileStorageService {
         );
 
         // =========================================================
-        // RETURN RELATIVE PATH
+        // RETURN RELATIVE FILE PATH
+        // =========================================================
+        //
+        // IMPORTANT:
+        //
+        // directory already contains the upload directory.
+        //
+        // Example:
+        //
+        // directory =
+        // uploads/jobseeker/profile
+        //
+        // Therefore DO NOT add uploadDir again.
+        //
+        // WRONG:
+        // /uploads/uploads/jobseeker/profile/file.png
+        //
+        // CORRECT:
+        // /uploads/jobseeker/profile/file.png
         // =========================================================
 
-        String uploadDir = fileStorageConfig.getUploadDir();
-
         return "/"
-                + uploadDir
-                + "/"
-                + directory
+                + directory.replace("\\", "/")
                 + "/"
                 + fullFileName;
     }
@@ -492,20 +524,18 @@ public class FileStorageServiceImpl implements FileStorageService {
 
             if (!StringUtils.hasText(filePath)) {
 
-                log.warn("File path is null or empty");
+                log.warn(
+                        "File path is null or empty"
+                );
 
                 return false;
             }
 
-            if (filePath.startsWith("/")) {
+            String normalizedPath =
+                    normalizeStoredPath(filePath);
 
-                filePath = filePath.substring(1);
-            }
-
-            Path path = Paths.get(
-                    fileStorageConfig.getUploadDir(),
-                    filePath
-            );
+            Path path =
+                    Paths.get(normalizedPath);
 
             if (Files.exists(path)) {
 
@@ -513,7 +543,7 @@ public class FileStorageServiceImpl implements FileStorageService {
 
                 log.info(
                         "File deleted successfully: {}",
-                        filePath
+                        path
                 );
 
                 return true;
@@ -521,7 +551,7 @@ public class FileStorageServiceImpl implements FileStorageService {
 
             log.warn(
                     "File not found: {}",
-                    filePath
+                    path
             );
 
             return false;
@@ -548,10 +578,11 @@ public class FileStorageServiceImpl implements FileStorageService {
 
         try {
 
-            Path path = Paths.get(
-                    directory,
-                    fileName
-            );
+            Path path =
+                    Paths.get(
+                            directory,
+                            fileName
+                    );
 
             if (Files.exists(path)) {
 
@@ -564,6 +595,11 @@ public class FileStorageServiceImpl implements FileStorageService {
 
                 return true;
             }
+
+            log.warn(
+                    "File not found in directory: {}",
+                    path
+            );
 
             return false;
 
@@ -590,7 +626,9 @@ public class FileStorageServiceImpl implements FileStorageService {
 
         if (file == null || file.isEmpty()) {
 
-            log.error("File is null or empty");
+            log.error(
+                    "File is null or empty"
+            );
 
             throw new BusinessException(
                     ErrorCode.FILE_REQUIRED
@@ -628,31 +666,37 @@ public class FileStorageServiceImpl implements FileStorageService {
     // =============================================================
 
     @Override
-    public boolean isValidFileType(MultipartFile file) {
+    public boolean isValidFileType(
+            MultipartFile file
+    ) {
 
         if (file == null || file.isEmpty()) {
             return false;
         }
 
-        String contentType = file.getContentType();
+        String contentType =
+                file.getContentType();
 
         if (StringUtils.hasText(contentType)) {
 
-            contentType = contentType
-                    .toLowerCase()
-                    .trim();
+            contentType =
+                    contentType
+                            .toLowerCase()
+                            .trim();
         }
 
-        String extension = getFileExtension(
-                file.getOriginalFilename()
-        );
+        String extension =
+                getFileExtension(
+                        file.getOriginalFilename()
+                );
 
         if (StringUtils.hasText(extension)) {
 
-            extension = extension
-                    .replace(".", "")
-                    .toLowerCase()
-                    .trim();
+            extension =
+                    extension
+                            .replace(".", "")
+                            .toLowerCase()
+                            .trim();
         }
 
         log.debug(
@@ -667,7 +711,8 @@ public class FileStorageServiceImpl implements FileStorageService {
         // =========================================================
 
         if (StringUtils.hasText(contentType)
-                && ALLOWED_IMAGE_CONTENT_TYPES.contains(contentType)) {
+                && ALLOWED_IMAGE_CONTENT_TYPES
+                .contains(contentType)) {
 
             log.debug(
                     "File accepted by Content-Type: {}",
@@ -683,7 +728,9 @@ public class FileStorageServiceImpl implements FileStorageService {
 
         if (StringUtils.hasText(contentType)
                 && fileStorageConfig.getAllowedTypes() != null
-                && fileStorageConfig.getAllowedTypes().contains(contentType)) {
+                && fileStorageConfig
+                .getAllowedTypes()
+                .contains(contentType)) {
 
             log.debug(
                     "File accepted by configured Content-Type: {}",
@@ -698,7 +745,8 @@ public class FileStorageServiceImpl implements FileStorageService {
         // =========================================================
 
         if ("application/octet-stream".equals(contentType)
-                && ALLOWED_IMAGE_EXTENSIONS.contains(extension)) {
+                && ALLOWED_IMAGE_EXTENSIONS
+                .contains(extension)) {
 
             log.warn(
                     "Content-Type is application/octet-stream. "
@@ -714,7 +762,8 @@ public class FileStorageServiceImpl implements FileStorageService {
         // =========================================================
 
         if (!StringUtils.hasText(contentType)
-                && ALLOWED_IMAGE_EXTENSIONS.contains(extension)) {
+                && ALLOWED_IMAGE_EXTENSIONS
+                .contains(extension)) {
 
             log.warn(
                     "Content-Type is missing. "
@@ -740,15 +789,19 @@ public class FileStorageServiceImpl implements FileStorageService {
     // =============================================================
 
     @Override
-    public boolean isValidFileSize(MultipartFile file) {
+    public boolean isValidFileSize(
+            MultipartFile file
+    ) {
 
         if (file == null) {
             return false;
         }
 
-        long fileSize = file.getSize();
+        long fileSize =
+                file.getSize();
 
-        long maxSize = fileStorageConfig.getMaxImageSize();
+        long maxSize =
+                fileStorageConfig.getMaxImageSize();
 
         return fileSize <= maxSize;
     }
@@ -759,31 +812,37 @@ public class FileStorageServiceImpl implements FileStorageService {
     // =============================================================
 
     @Override
-    public boolean isValidResumeType(MultipartFile file) {
+    public boolean isValidResumeType(
+            MultipartFile file
+    ) {
 
         if (file == null || file.isEmpty()) {
             return false;
         }
 
-        String contentType = file.getContentType();
+        String contentType =
+                file.getContentType();
 
         if (StringUtils.hasText(contentType)) {
 
-            contentType = contentType
-                    .toLowerCase()
-                    .trim();
+            contentType =
+                    contentType
+                            .toLowerCase()
+                            .trim();
         }
 
-        String extension = getFileExtension(
-                file.getOriginalFilename()
-        );
+        String extension =
+                getFileExtension(
+                        file.getOriginalFilename()
+                );
 
         if (StringUtils.hasText(extension)) {
 
-            extension = extension
-                    .replace(".", "")
-                    .toLowerCase()
-                    .trim();
+            extension =
+                    extension
+                            .replace(".", "")
+                            .toLowerCase()
+                            .trim();
         }
 
         log.debug(
@@ -798,7 +857,8 @@ public class FileStorageServiceImpl implements FileStorageService {
         // =========================================================
 
         if (StringUtils.hasText(contentType)
-                && ALLOWED_RESUME_CONTENT_TYPES.contains(contentType)) {
+                && ALLOWED_RESUME_CONTENT_TYPES
+                .contains(contentType)) {
 
             log.debug(
                     "Resume accepted by Content-Type: {}",
@@ -813,8 +873,11 @@ public class FileStorageServiceImpl implements FileStorageService {
         // =========================================================
 
         if (StringUtils.hasText(contentType)
-                && fileStorageConfig.getAllowedResumeTypes() != null
-                && fileStorageConfig.getAllowedResumeTypes().contains(contentType)) {
+                && fileStorageConfig
+                .getAllowedResumeTypes() != null
+                && fileStorageConfig
+                .getAllowedResumeTypes()
+                .contains(contentType)) {
 
             log.debug(
                     "Resume accepted by configured Content-Type: {}",
@@ -829,7 +892,8 @@ public class FileStorageServiceImpl implements FileStorageService {
         // =========================================================
 
         if ("application/octet-stream".equals(contentType)
-                && ALLOWED_RESUME_EXTENSIONS.contains(extension)) {
+                && ALLOWED_RESUME_EXTENSIONS
+                .contains(extension)) {
 
             log.warn(
                     "Content-Type is application/octet-stream. "
@@ -845,7 +909,8 @@ public class FileStorageServiceImpl implements FileStorageService {
         // =========================================================
 
         if (!StringUtils.hasText(contentType)
-                && ALLOWED_RESUME_EXTENSIONS.contains(extension)) {
+                && ALLOWED_RESUME_EXTENSIONS
+                .contains(extension)) {
 
             log.warn(
                     "Content-Type is missing. "
@@ -871,15 +936,19 @@ public class FileStorageServiceImpl implements FileStorageService {
     // =============================================================
 
     @Override
-    public boolean isValidResumeSize(MultipartFile file) {
+    public boolean isValidResumeSize(
+            MultipartFile file
+    ) {
 
         if (file == null) {
             return false;
         }
 
-        long fileSize = file.getSize();
+        long fileSize =
+                file.getSize();
 
-        long maxSize = fileStorageConfig.getMaxResumeSize();
+        long maxSize =
+                fileStorageConfig.getMaxResumeSize();
 
         return fileSize <= maxSize;
     }
@@ -889,7 +958,9 @@ public class FileStorageServiceImpl implements FileStorageService {
     // =============================================================
 
     @Override
-    public void validateResume(MultipartFile file) {
+    public void validateResume(
+            MultipartFile file
+    ) {
 
         if (file == null || file.isEmpty()) {
 
@@ -938,7 +1009,8 @@ public class FileStorageServiceImpl implements FileStorageService {
                     ErrorCode.FILE_TOO_LARGE,
                     "Resume file size exceeds the maximum limit of "
                             + formatFileSize(
-                            fileStorageConfig.getMaxResumeSize()
+                            fileStorageConfig
+                                    .getMaxResumeSize()
                     )
             );
         }
@@ -949,7 +1021,9 @@ public class FileStorageServiceImpl implements FileStorageService {
     // =============================================================
 
     @Override
-    public String getFileSize(MultipartFile file) {
+    public String getFileSize(
+            MultipartFile file
+    ) {
 
         if (file == null) {
             return "0 B";
@@ -961,7 +1035,9 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     @Override
-    public long getFileSizeInBytes(MultipartFile file) {
+    public long getFileSizeInBytes(
+            MultipartFile file
+    ) {
 
         if (file == null) {
             return 0L;
@@ -975,19 +1051,23 @@ public class FileStorageServiceImpl implements FileStorageService {
     // =============================================================
 
     @Override
-    public String getFileExtension(String fileName) {
+    public String getFileExtension(
+            String fileName
+    ) {
 
         if (!StringUtils.hasText(fileName)) {
             return "";
         }
 
         // Remove path information if client sends it
-        fileName = Paths
-                .get(fileName)
-                .getFileName()
-                .toString();
+        fileName =
+                Paths
+                        .get(fileName)
+                        .getFileName()
+                        .toString();
 
-        int lastDotIndex = fileName.lastIndexOf(".");
+        int lastDotIndex =
+                fileName.lastIndexOf(".");
 
         if (lastDotIndex == -1) {
             return "";
@@ -1009,22 +1089,25 @@ public class FileStorageServiceImpl implements FileStorageService {
             String prefix
     ) {
 
-        String extension = getFileExtension(
-                originalFileName
-        );
-
-        String timestamp = LocalDateTime
-                .now()
-                .format(
-                        DateTimeFormatter.ofPattern(
-                                "yyyyMMddHHmmss"
-                        )
+        String extension =
+                getFileExtension(
+                        originalFileName
                 );
 
-        String uuid = UUID
-                .randomUUID()
-                .toString()
-                .substring(0, 8);
+        String timestamp =
+                LocalDateTime
+                        .now()
+                        .format(
+                                DateTimeFormatter.ofPattern(
+                                        "yyyyMMddHHmmss"
+                                )
+                        );
+
+        String uuid =
+                UUID
+                        .randomUUID()
+                        .toString()
+                        .substring(0, 8);
 
         return timestamp
                 + "_"
@@ -1037,7 +1120,9 @@ public class FileStorageServiceImpl implements FileStorageService {
     // =============================================================
 
     @Override
-    public String getContentType(MultipartFile file) {
+    public String getContentType(
+            MultipartFile file
+    ) {
 
         if (file == null) {
             return null;
@@ -1051,43 +1136,119 @@ public class FileStorageServiceImpl implements FileStorageService {
     // =============================================================
 
     @Override
-    public boolean fileExists(String filePath) {
+    public boolean fileExists(
+            String filePath
+    ) {
 
         if (!StringUtils.hasText(filePath)) {
             return false;
         }
 
-        if (filePath.startsWith("/")) {
+        try {
 
-            filePath = filePath.substring(1);
+            String normalizedPath =
+                    normalizeStoredPath(filePath);
+
+            return Files.exists(
+                    Paths.get(normalizedPath)
+            );
+
+        } catch (Exception e) {
+
+            log.error(
+                    "Error checking file existence: {}",
+                    filePath,
+                    e
+            );
+
+            return false;
         }
-
-        Path path = Paths.get(
-                fileStorageConfig.getUploadDir(),
-                filePath
-        );
-
-        return Files.exists(path);
     }
 
     // =============================================================
     // 10. PRIVATE HELPER METHODS
     // =============================================================
 
-    private String formatFileSize(long sizeInBytes) {
+    /**
+     * Converts a stored file path into an actual
+     * filesystem path.
+     *
+     * Supported stored paths:
+     *
+     * /uploads/jobseeker/profile/file.png
+     *
+     * uploads/jobseeker/profile/file.png
+     *
+     * The returned path is:
+     *
+     * uploads/jobseeker/profile/file.png
+     */
+    private String normalizeStoredPath(
+            String filePath
+    ) {
+
+        String normalized =
+                filePath
+                        .trim()
+                        .replace("\\", "/");
+
+        // Remove leading slash
+        while (normalized.startsWith("/")) {
+            normalized =
+                    normalized.substring(1);
+        }
+
+        String uploadDir =
+                fileStorageConfig
+                        .getUploadDir()
+                        .replace("\\", "/");
+
+        while (uploadDir.startsWith("/")) {
+            uploadDir =
+                    uploadDir.substring(1);
+        }
+
+        /*
+         * If the stored path already starts with
+         * uploads/, do not add uploads again.
+         */
+        if (normalized.equals(uploadDir)
+                || normalized.startsWith(
+                uploadDir + "/"
+        )) {
+
+            return normalized;
+        }
+
+        /*
+         * Otherwise the path is relative to the
+         * configured upload directory.
+         */
+        return uploadDir + "/" + normalized;
+    }
+
+    // =============================================================
+    // FORMAT FILE SIZE
+    // =============================================================
+
+    private String formatFileSize(
+            long sizeInBytes
+    ) {
 
         if (sizeInBytes >= 1024 * 1024) {
 
             return String.format(
                     "%.2f MB",
-                    (double) sizeInBytes / (1024 * 1024)
+                    (double) sizeInBytes
+                            / (1024 * 1024)
             );
 
         } else if (sizeInBytes >= 1024) {
 
             return String.format(
                     "%.2f KB",
-                    (double) sizeInBytes / 1024
+                    (double) sizeInBytes
+                            / 1024
             );
 
         } else {

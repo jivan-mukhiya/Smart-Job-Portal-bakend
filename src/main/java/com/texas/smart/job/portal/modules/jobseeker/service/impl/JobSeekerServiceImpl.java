@@ -2,139 +2,212 @@ package com.texas.smart.job.portal.modules.jobseeker.service.impl;
 
 import com.texas.smart.job.portal.common.constants.ErrorCode;
 import com.texas.smart.job.portal.common.enums.Role;
+import com.texas.smart.job.portal.common.enums.SocialPlatform;
 import com.texas.smart.job.portal.common.exceptions.custom.BusinessException;
 import com.texas.smart.job.portal.common.service.FileStorageService;
+
 import com.texas.smart.job.portal.modules.auth.entity.User;
 import com.texas.smart.job.portal.modules.auth.repository.UserRepository;
+
 import com.texas.smart.job.portal.modules.jobseeker.dto.request.JobSeekerRequest;
 import com.texas.smart.job.portal.modules.jobseeker.dto.request.JobSeekerUpdateRequest;
 import com.texas.smart.job.portal.modules.jobseeker.dto.request.SocialProfileRequest;
+
 import com.texas.smart.job.portal.modules.jobseeker.dto.response.JobSeekerResponse;
+import com.texas.smart.job.portal.modules.jobseeker.dto.response.ResumeResponse;
+
 import com.texas.smart.job.portal.modules.jobseeker.entity.JobSeeker;
 import com.texas.smart.job.portal.modules.jobseeker.entity.JobSeekerSkill;
 import com.texas.smart.job.portal.modules.jobseeker.entity.JobSeekerSocialProfile;
 import com.texas.smart.job.portal.modules.jobseeker.entity.ProfileImage;
 import com.texas.smart.job.portal.modules.jobseeker.entity.Resume;
+
 import com.texas.smart.job.portal.modules.jobseeker.mapper.JobSeekerMapper;
+
 import com.texas.smart.job.portal.modules.jobseeker.repository.JobSeekerRepository;
+import com.texas.smart.job.portal.modules.jobseeker.repository.JobSeekerSkillRepository;
+import com.texas.smart.job.portal.modules.jobseeker.repository.JobSeekerSocialProfileRepository;
+import com.texas.smart.job.portal.modules.jobseeker.repository.ResumeRepository;
+
 import com.texas.smart.job.portal.modules.jobseeker.service.JobSeekerService;
+
+import jakarta.persistence.EntityManager;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
 
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class JobSeekerServiceImpl implements JobSeekerService {
+public class JobSeekerServiceImpl
+        implements JobSeekerService {
+
 
     private final JobSeekerRepository jobSeekerRepository;
+
+    private final JobSeekerSkillRepository
+            jobSeekerSkillRepository;
+
+    private final JobSeekerSocialProfileRepository
+            jobSeekerSocialProfileRepository;
+
+    private final ResumeRepository resumeRepository;
+
     private final UserRepository userRepository;
+
     private final JobSeekerMapper jobSeekerMapper;
+
     private final FileStorageService fileStorageService;
 
+    private final EntityManager entityManager;
 
-    // ============================================================
+
+    // =============================================================
     // CREATE
-    // ============================================================
+    // =============================================================
 
     @Override
-    public JobSeekerResponse createJobSeeker(JobSeekerRequest request) {
+    public JobSeekerResponse createJobSeeker(
+            JobSeekerRequest request
+    ) {
 
         User user = getCurrentUser();
 
-        // Only JOB_SEEKER can create a job seeker profile
         if (user.getRole() != Role.JOB_SEEKER) {
+
             throw new BusinessException(
                     ErrorCode.INVALID_USER_ROLE
             );
         }
 
-        // One profile per user
-        if (jobSeekerRepository.existsByUserId(user.getId())) {
+        if (
+                jobSeekerRepository
+                        .existsByUserId(user.getId())
+        ) {
+
             throw new BusinessException(
                     ErrorCode.JOB_SEEKER_ALREADY_EXISTS
             );
         }
 
-        // Email must be unique
-        if (jobSeekerRepository.existsByEmail(request.getEmail())) {
+        if (
+                jobSeekerRepository
+                        .existsByEmail(request.getEmail())
+        ) {
+
             throw new BusinessException(
                     ErrorCode.EMAIL_ALREADY_EXISTS
             );
         }
 
-        JobSeeker jobSeeker = jobSeekerMapper.toEntity(request);
+        JobSeeker jobSeeker =
+                jobSeekerMapper.toEntity(request);
 
         jobSeeker.setUser(user);
 
-        // Save first so the JobSeeker gets an ID
-        jobSeeker = jobSeekerRepository.save(jobSeeker);
+        /*
+         * Save first because JobSeeker ID is required
+         * for file storage.
+         */
+        jobSeeker =
+                jobSeekerRepository.save(jobSeeker);
 
-        // --------------------------------------------------------
-        // Profile Image
-        // --------------------------------------------------------
+
+        // =========================================================
+        // PROFILE IMAGE
+        // =========================================================
 
         if (request.hasProfileImage()) {
 
-            ProfileImage profileImage = createProfileImage(
-                    jobSeeker,
-                    request.getProfileImage()
-            );
+            ProfileImage profileImage =
+                    createProfileImage(
+                            jobSeeker,
+                            request.getProfileImage()
+                    );
 
-            jobSeeker.setProfileImage(profileImage);
+            jobSeeker.setProfileImage(
+                    profileImage
+            );
         }
 
-        // --------------------------------------------------------
-        // Resume
-        // --------------------------------------------------------
 
-        if (request.hasResumeFile() || request.hasResumeUrl()) {
+        // =========================================================
+        // RESUME
+        // =========================================================
 
-            Resume resume = createResume(
-                    jobSeeker,
-                    request.getResumeFile(),
-                    request.getResumeUrl()
-            );
+        if (
+                request.hasResumeFile()
+                        || request.hasResumeUrl()
+        ) {
+
+            Resume resume =
+                    createResume(
+                            jobSeeker,
+                            request.getResumeFile(),
+                            request.getResumeUrl()
+                    );
 
             jobSeeker.setResume(resume);
         }
 
-        // --------------------------------------------------------
-        // Skills
-        // --------------------------------------------------------
+
+        // =========================================================
+        // SKILLS
+        // =========================================================
 
         if (request.hasSkills()) {
-            addSkills(jobSeeker, request.getSkills());
+
+            addSkills(
+                    jobSeeker,
+                    request.getSkills()
+            );
         }
 
-        // --------------------------------------------------------
-        // Social Profiles
-        // --------------------------------------------------------
+
+        // =========================================================
+        // SOCIAL PROFILES
+        // =========================================================
 
         if (request.hasSocialProfiles()) {
+
             addSocialProfiles(
                     jobSeeker,
                     request.getSocialProfiles()
             );
         }
 
-        jobSeeker = jobSeekerRepository.save(jobSeeker);
+
+        jobSeeker =
+                jobSeekerRepository.save(jobSeeker);
+
+        jobSeekerRepository.flush();
 
         return jobSeekerMapper.toResponse(jobSeeker);
     }
 
 
-    // ============================================================
+    // =============================================================
     // GET MY PROFILE
-    // ============================================================
+    // =============================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -142,37 +215,167 @@ public class JobSeekerServiceImpl implements JobSeekerService {
 
         User user = getCurrentUser();
 
-        JobSeeker jobSeeker = jobSeekerRepository
-                .findByUserId(user.getId())
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.JOB_SEEKER_NOT_FOUND
-                ));
+        JobSeeker jobSeeker =
+                jobSeekerRepository
+                        .findByUserId(user.getId())
+                        .orElseThrow(
+                                () -> new BusinessException(
+                                        ErrorCode.JOB_SEEKER_NOT_FOUND
+                                )
+                        );
 
-        return jobSeekerMapper.toResponse(jobSeeker);
+        return jobSeekerMapper.toResponse(
+                jobSeeker
+        );
     }
 
 
-    // ============================================================
-    // GET BY ID
-    // ============================================================
+    // =============================================================
+    // GET MY RESUME
+    // =============================================================
 
     @Override
     @Transactional(readOnly = true)
-    public JobSeekerResponse getJobSeekerById(Long id) {
+    public ResumeResponse getMyResume() {
 
-        JobSeeker jobSeeker = jobSeekerRepository
-                .findById(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.JOB_SEEKER_NOT_FOUND
-                ));
+        /*
+         * Get the currently authenticated user.
+         */
+        User user = getCurrentUser();
 
-        return jobSeekerMapper.toResponse(jobSeeker);
+
+        /*
+         * Find the JobSeeker belonging to this user.
+         *
+         * This is the important security part.
+         *
+         * We do NOT accept a jobSeekerId from the frontend.
+         */
+        JobSeeker jobSeeker =
+                jobSeekerRepository
+                        .findByUserId(user.getId())
+                        .orElseThrow(
+                                () -> new BusinessException(
+                                        ErrorCode.JOB_SEEKER_NOT_FOUND
+                                )
+                        );
+
+
+        /*
+         * Find the resume belonging to this
+         * authenticated job seeker.
+         */
+        Resume resume =
+                resumeRepository
+                        .findByJobSeekerId(
+                                jobSeeker.getId()
+                        )
+                        .orElse(null);
+
+
+        /*
+         * Job seeker exists but has no resume.
+         *
+         * This is NOT an error.
+         *
+         * The frontend can display:
+         *
+         * "Please add your resume first."
+         */
+        if (resume == null) {
+
+            return ResumeResponse.builder()
+                    .id(null)
+                    .resumeUrl(null)
+                    .filePath(null)
+                    .fileName(null)
+                    .fileSize(null)
+                    .contentType(null)
+                    .fileUrl(null)
+                    .build();
+        }
+
+
+        /*
+         * External resume URL.
+         */
+        String resumeUrl =
+                resume.getResumeUrl();
+
+
+        /*
+         * Stored project file path.
+         */
+        String filePath =
+                resume.getFilePath();
+
+
+        /*
+         * Resume file URL.
+         *
+         * Do NOT use:
+         *
+         * resume.getFileUrl()
+         *
+         * because Resume does not have a fileUrl field.
+         */
+        String fileUrl = null;
+
+        if (
+                filePath != null
+                        && !filePath.trim().isEmpty()
+        ) {
+
+            /*
+             * Currently filePath is returned as the URL.
+             *
+             * If your FileStorageService uses a different
+             * public file URL, this can be changed there.
+             */
+            fileUrl = filePath;
+        }
+
+
+        return ResumeResponse.builder()
+                .id(resume.getId())
+                .resumeUrl(resumeUrl)
+                .filePath(filePath)
+                .fileName(resume.getFileName())
+                .fileSize(resume.getFileSize())
+                .contentType(resume.getContentType())
+                .fileUrl(fileUrl)
+                .build();
     }
 
 
-    // ============================================================
+    // =============================================================
+    // GET BY ID
+    // =============================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public JobSeekerResponse getJobSeekerById(
+            Long id
+    ) {
+
+        JobSeeker jobSeeker =
+                jobSeekerRepository
+                        .findById(id)
+                        .orElseThrow(
+                                () -> new BusinessException(
+                                        ErrorCode.JOB_SEEKER_NOT_FOUND
+                                )
+                        );
+
+        return jobSeekerMapper.toResponse(
+                jobSeeker
+        );
+    }
+
+
+    // =============================================================
     // GET ALL
-    // ============================================================
+    // =============================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -183,54 +386,75 @@ public class JobSeekerServiceImpl implements JobSeekerService {
 
         Page<JobSeeker> jobSeekers;
 
-        if (search == null || search.trim().isEmpty()) {
+        if (
+                search == null
+                        || search.trim().isEmpty()
+        ) {
 
-            jobSeekers = jobSeekerRepository.findAll(pageable);
+            jobSeekers =
+                    jobSeekerRepository
+                            .findAll(pageable);
 
         } else {
 
-            jobSeekers = jobSeekerRepository
-                    .searchJobSeekers(search.trim(), pageable);
+            jobSeekers =
+                    jobSeekerRepository
+                            .searchJobSeekers(
+                                    search.trim(),
+                                    pageable
+                            );
         }
 
-        return jobSeekers.map(jobSeekerMapper::toResponse);
+        return jobSeekers.map(
+                jobSeekerMapper::toResponse
+        );
     }
 
 
-    // ============================================================
+    // =============================================================
     // OPEN TO WORK
-    // ============================================================
+    // =============================================================
 
     @Override
     @Transactional(readOnly = true)
-    public Page<JobSeekerResponse> getOpenToWorkJobSeekers(
+    public Page<JobSeekerResponse>
+    getOpenToWorkJobSeekers(
             String search,
             Pageable pageable
     ) {
 
         Page<JobSeeker> jobSeekers;
 
-        if (search == null || search.trim().isEmpty()) {
+        if (
+                search == null
+                        || search.trim().isEmpty()
+        ) {
 
-            jobSeekers = jobSeekerRepository
-                    .findByOpenToWorkTrue(pageable);
+            jobSeekers =
+                    jobSeekerRepository
+                            .findByOpenToWorkTrue(
+                                    pageable
+                            );
 
         } else {
 
-            jobSeekers = jobSeekerRepository
-                    .searchOpenToWorkJobSeekers(
-                            search.trim(),
-                            pageable
-                    );
+            jobSeekers =
+                    jobSeekerRepository
+                            .searchOpenToWorkJobSeekers(
+                                    search.trim(),
+                                    pageable
+                            );
         }
 
-        return jobSeekers.map(jobSeekerMapper::toResponse);
+        return jobSeekers.map(
+                jobSeekerMapper::toResponse
+        );
     }
 
 
-    // ============================================================
+    // =============================================================
     // UPDATE MY PROFILE
-    // ============================================================
+    // =============================================================
 
     @Override
     public JobSeekerResponse updateMyProfile(
@@ -239,80 +463,121 @@ public class JobSeekerServiceImpl implements JobSeekerService {
 
         User user = getCurrentUser();
 
-        JobSeeker jobSeeker = jobSeekerRepository
-                .findByUserId(user.getId())
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.JOB_SEEKER_NOT_FOUND
-                ));
+        JobSeeker jobSeeker =
+                jobSeekerRepository
+                        .findByUserId(user.getId())
+                        .orElseThrow(
+                                () -> new BusinessException(
+                                        ErrorCode.JOB_SEEKER_NOT_FOUND
+                                )
+                        );
 
-        // --------------------------------------------------------
-        // Email
-        // --------------------------------------------------------
 
-        if (request.getEmail() != null
-                && !request.getEmail().equalsIgnoreCase(
-                jobSeeker.getEmail()
-        )) {
+        // =========================================================
+        // EMAIL
+        // =========================================================
 
-            if (jobSeekerRepository.existsByEmailAndIdNot(
-                    request.getEmail(),
-                    jobSeeker.getId()
-            )) {
+        if (
+                request.getEmail() != null
+                        && !request.getEmail()
+                        .equalsIgnoreCase(
+                                jobSeeker.getEmail()
+                        )
+        ) {
+
+            if (
+                    jobSeekerRepository
+                            .existsByEmailAndIdNot(
+                                    request.getEmail(),
+                                    jobSeeker.getId()
+                            )
+            ) {
+
                 throw new BusinessException(
                         ErrorCode.EMAIL_ALREADY_EXISTS
                 );
             }
 
-            jobSeeker.setEmail(request.getEmail());
+            jobSeeker.setEmail(
+                    request.getEmail().trim()
+            );
         }
 
-        // --------------------------------------------------------
-        // Basic fields
-        // --------------------------------------------------------
+
+        // =========================================================
+        // PERSONAL INFORMATION
+        // =========================================================
 
         if (request.getFullName() != null) {
-            jobSeeker.setFullName(request.getFullName());
+
+            jobSeeker.setFullName(
+                    request.getFullName().trim()
+            );
         }
 
         if (request.getPhone() != null) {
-            jobSeeker.setPhone(request.getPhone());
+
+            jobSeeker.setPhone(
+                    request.getPhone().trim()
+            );
         }
 
         if (request.getProfessionalTitle() != null) {
+
             jobSeeker.setProfessionalTitle(
-                    request.getProfessionalTitle()
+                    request.getProfessionalTitle().trim()
             );
         }
 
         if (request.getAbout() != null) {
-            jobSeeker.setAbout(request.getAbout());
+
+            jobSeeker.setAbout(
+                    request.getAbout().trim()
+            );
         }
 
         if (request.getAddress() != null) {
-            jobSeeker.setAddress(request.getAddress());
+
+            jobSeeker.setAddress(
+                    request.getAddress().trim()
+            );
         }
 
+
+        // =========================================================
+        // PROFESSIONAL INFORMATION
+        // =========================================================
+
         if (request.getYearsOfExperience() != null) {
+
             jobSeeker.setYearsOfExperience(
                     request.getYearsOfExperience()
             );
         }
 
         if (request.getHighestEducation() != null) {
+
             jobSeeker.setHighestEducation(
-                    request.getHighestEducation()
+                    request.getHighestEducation().trim()
             );
         }
 
+
+        // =========================================================
+        // JOB PREFERENCE
+        // =========================================================
+
         if (request.getOpenToWork() != null) {
+
             jobSeeker.setOpenToWork(
                     request.getOpenToWork()
             );
         }
 
-        // --------------------------------------------------------
-        // Profile Image
-        // --------------------------------------------------------
+
+        // =========================================================
+        // PROFILE IMAGE
+        // =========================================================
 
         if (request.hasProfileImage()) {
 
@@ -321,14 +586,19 @@ public class JobSeekerServiceImpl implements JobSeekerService {
                     request.getProfileImage()
             );
 
-        } else if (request.shouldRemoveProfileImage()) {
+        } else if (
+                request.shouldRemoveProfileImage()
+        ) {
 
-            removeProfileImageInternal(jobSeeker);
+            removeProfileImageInternal(
+                    jobSeeker
+            );
         }
 
-        // --------------------------------------------------------
-        // Resume
-        // --------------------------------------------------------
+
+        // =========================================================
+        // RESUME
+        // =========================================================
 
         if (request.hasResumeFile()) {
 
@@ -337,11 +607,17 @@ public class JobSeekerServiceImpl implements JobSeekerService {
                     request.getResumeFile()
             );
 
-        } else if (request.shouldRemoveResumeFile()) {
+        } else if (
+                request.shouldRemoveResumeFile()
+        ) {
 
-            removeResumeInternal(jobSeeker);
+            removeResumeInternal(
+                    jobSeeker
+            );
 
-        } else if (request.hasResumeUrl()) {
+        } else if (
+                request.hasResumeUrl()
+        ) {
 
             updateResumeUrlInternal(
                     jobSeeker,
@@ -349,11 +625,12 @@ public class JobSeekerServiceImpl implements JobSeekerService {
             );
         }
 
-        // --------------------------------------------------------
-        // Skills
-        // --------------------------------------------------------
 
-        if (request.hasSkills()) {
+        // =========================================================
+        // SKILLS
+        // =========================================================
+
+        if (request.hasSkillsField()) {
 
             replaceSkills(
                     jobSeeker,
@@ -361,11 +638,12 @@ public class JobSeekerServiceImpl implements JobSeekerService {
             );
         }
 
-        // --------------------------------------------------------
-        // Social Profiles
-        // --------------------------------------------------------
 
-        if (request.hasSocialProfiles()) {
+        // =========================================================
+        // SOCIAL PROFILES
+        // =========================================================
+
+        if (request.hasSocialProfilesField()) {
 
             replaceSocialProfiles(
                     jobSeeker,
@@ -373,64 +651,75 @@ public class JobSeekerServiceImpl implements JobSeekerService {
             );
         }
 
-        jobSeeker = jobSeekerRepository.save(jobSeeker);
 
-        return jobSeekerMapper.toResponse(jobSeeker);
+        // =========================================================
+        // SAVE
+        // =========================================================
+
+        jobSeeker =
+                jobSeekerRepository.save(
+                        jobSeeker
+                );
+
+        jobSeekerRepository.flush();
+
+        return jobSeekerMapper.toResponse(
+                jobSeeker
+        );
     }
 
 
-    // ============================================================
+    // =============================================================
     // DELETE MY PROFILE
-    // ============================================================
+    // =============================================================
 
     @Override
     public void deleteMyProfile() {
 
         User user = getCurrentUser();
 
-        JobSeeker jobSeeker = jobSeekerRepository
-                .findByUserId(user.getId())
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.JOB_SEEKER_NOT_FOUND
-                ));
+        JobSeeker jobSeeker =
+                jobSeekerRepository
+                        .findByUserId(user.getId())
+                        .orElseThrow(
+                                () -> new BusinessException(
+                                        ErrorCode.JOB_SEEKER_NOT_FOUND
+                                )
+                        );
 
-        // Delete physical profile image
-        if (jobSeeker.getProfileImage() != null) {
+        if (
+                jobSeeker.getProfileImage() != null
+        ) {
 
             deletePhysicalFile(
-                    jobSeeker.getProfileImage().getImagePath()
+                    jobSeeker
+                            .getProfileImage()
+                            .getImagePath()
             );
         }
 
-        // Delete physical resume
-        if (jobSeeker.getResume() != null) {
+        if (
+                jobSeeker.getResume() != null
+        ) {
 
             deletePhysicalFile(
-                    jobSeeker.getResume().getFilePath()
+                    jobSeeker
+                            .getResume()
+                            .getFilePath()
             );
         }
 
-        /*
-         * CascadeType.ALL + orphanRemoval=true
-         * will delete:
-         *
-         * profile_images
-         * resumes
-         * job_seeker_skills
-         * job_seeker_social_profiles
-         *
-         * when JobSeeker is deleted.
-         */
-        jobSeekerRepository.delete(jobSeeker);
+        jobSeekerRepository.delete(
+                jobSeeker
+        );
 
-        // Important for FK/cascade synchronization
         jobSeekerRepository.flush();
     }
 
 
-    // ============================================================
+    // =============================================================
     // PROFILE IMAGE
-    // ============================================================
+    // =============================================================
 
     @Override
     public JobSeekerResponse updateProfileImage(
@@ -439,11 +728,19 @@ public class JobSeekerServiceImpl implements JobSeekerService {
 
         User user = getCurrentUser();
 
-        JobSeeker jobSeeker = getJobSeekerForUser(user);
+        JobSeeker jobSeeker =
+                getJobSeekerForUser(user);
 
-        replaceProfileImage(jobSeeker, file);
+        replaceProfileImage(
+                jobSeeker,
+                file
+        );
 
-        return jobSeekerMapper.toResponse(jobSeeker);
+        jobSeekerRepository.flush();
+
+        return jobSeekerMapper.toResponse(
+                jobSeeker
+        );
     }
 
 
@@ -452,15 +749,20 @@ public class JobSeekerServiceImpl implements JobSeekerService {
 
         User user = getCurrentUser();
 
-        JobSeeker jobSeeker = getJobSeekerForUser(user);
+        JobSeeker jobSeeker =
+                getJobSeekerForUser(user);
 
-        removeProfileImageInternal(jobSeeker);
+        removeProfileImageInternal(
+                jobSeeker
+        );
+
+        jobSeekerRepository.flush();
     }
 
 
-    // ============================================================
-    // RESUME
-    // ============================================================
+    // =============================================================
+    // RESUME MANAGEMENT
+    // =============================================================
 
     @Override
     public JobSeekerResponse updateResume(
@@ -469,11 +771,19 @@ public class JobSeekerServiceImpl implements JobSeekerService {
 
         User user = getCurrentUser();
 
-        JobSeeker jobSeeker = getJobSeekerForUser(user);
+        JobSeeker jobSeeker =
+                getJobSeekerForUser(user);
 
-        replaceResume(jobSeeker, file);
+        replaceResume(
+                jobSeeker,
+                file
+        );
 
-        return jobSeekerMapper.toResponse(jobSeeker);
+        jobSeekerRepository.flush();
+
+        return jobSeekerMapper.toResponse(
+                jobSeeker
+        );
     }
 
 
@@ -484,14 +794,19 @@ public class JobSeekerServiceImpl implements JobSeekerService {
 
         User user = getCurrentUser();
 
-        JobSeeker jobSeeker = getJobSeekerForUser(user);
+        JobSeeker jobSeeker =
+                getJobSeekerForUser(user);
 
         updateResumeUrlInternal(
                 jobSeeker,
                 resumeUrl
         );
 
-        return jobSeekerMapper.toResponse(jobSeeker);
+        jobSeekerRepository.flush();
+
+        return jobSeekerMapper.toResponse(
+                jobSeeker
+        );
     }
 
 
@@ -500,15 +815,20 @@ public class JobSeekerServiceImpl implements JobSeekerService {
 
         User user = getCurrentUser();
 
-        JobSeeker jobSeeker = getJobSeekerForUser(user);
+        JobSeeker jobSeeker =
+                getJobSeekerForUser(user);
 
-        removeResumeInternal(jobSeeker);
+        removeResumeInternal(
+                jobSeeker
+        );
+
+        jobSeekerRepository.flush();
     }
 
 
-    // ============================================================
+    // =============================================================
     // PROFILE IMAGE HELPERS
-    // ============================================================
+    // =============================================================
 
     private ProfileImage createProfileImage(
             JobSeeker jobSeeker,
@@ -518,21 +838,35 @@ public class JobSeekerServiceImpl implements JobSeekerService {
         try {
 
             String imagePath =
-                    fileStorageService.storeJobSeekerProfileImage(
-                            file,
-                            jobSeeker.getId()
-                    );
+                    fileStorageService
+                            .storeJobSeekerProfileImage(
+                                    file,
+                                    jobSeeker.getId()
+                            );
 
-            ProfileImage profileImage = new ProfileImage();
+            ProfileImage profileImage =
+                    new ProfileImage();
 
-            profileImage.setJobSeeker(jobSeeker);
-            profileImage.setImagePath(imagePath);
-            profileImage.setFileName(file.getOriginalFilename());
-            profileImage.setFileSize(
-                    fileStorageService.getFileSize(file)
+            profileImage.setJobSeeker(
+                    jobSeeker
             );
+
+            profileImage.setImagePath(
+                    imagePath
+            );
+
+            profileImage.setFileName(
+                    file.getOriginalFilename()
+            );
+
+            profileImage.setFileSize(
+                    fileStorageService
+                            .getFileSize(file)
+            );
+
             profileImage.setContentType(
-                    fileStorageService.getContentType(file)
+                    fileStorageService
+                            .getContentType(file)
             );
 
             return profileImage;
@@ -552,27 +886,40 @@ public class JobSeekerServiceImpl implements JobSeekerService {
             MultipartFile file
     ) {
 
-        ProfileImage existing = jobSeeker.getProfileImage();
+        ProfileImage existing =
+                jobSeeker.getProfileImage();
 
         if (existing != null) {
 
-            deletePhysicalFile(existing.getImagePath());
+            deletePhysicalFile(
+                    existing.getImagePath()
+            );
 
             try {
 
                 String imagePath =
-                        fileStorageService.storeJobSeekerProfileImage(
-                                file,
-                                jobSeeker.getId()
-                        );
+                        fileStorageService
+                                .storeJobSeekerProfileImage(
+                                        file,
+                                        jobSeeker.getId()
+                                );
 
-                existing.setImagePath(imagePath);
-                existing.setFileName(file.getOriginalFilename());
-                existing.setFileSize(
-                        fileStorageService.getFileSize(file)
+                existing.setImagePath(
+                        imagePath
                 );
+
+                existing.setFileName(
+                        file.getOriginalFilename()
+                );
+
+                existing.setFileSize(
+                        fileStorageService
+                                .getFileSize(file)
+                );
+
                 existing.setContentType(
-                        fileStorageService.getContentType(file)
+                        fileStorageService
+                                .getContentType(file)
                 );
 
             } catch (IOException e) {
@@ -586,9 +933,14 @@ public class JobSeekerServiceImpl implements JobSeekerService {
         } else {
 
             ProfileImage profileImage =
-                    createProfileImage(jobSeeker, file);
+                    createProfileImage(
+                            jobSeeker,
+                            file
+                    );
 
-            jobSeeker.setProfileImage(profileImage);
+            jobSeeker.setProfileImage(
+                    profileImage
+            );
         }
     }
 
@@ -608,13 +960,17 @@ public class JobSeekerServiceImpl implements JobSeekerService {
                 existing.getImagePath()
         );
 
-        jobSeeker.setProfileImage(null);
+        jobSeeker.setProfileImage(
+                null
+        );
+
+        entityManager.flush();
     }
 
 
-    // ============================================================
+    // =============================================================
     // RESUME HELPERS
-    // ============================================================
+    // =============================================================
 
     private Resume createResume(
             JobSeeker jobSeeker,
@@ -622,33 +978,55 @@ public class JobSeekerServiceImpl implements JobSeekerService {
             String resumeUrl
     ) {
 
-        Resume resume = new Resume();
+        Resume resume =
+                new Resume();
 
-        resume.setJobSeeker(jobSeeker);
+        resume.setJobSeeker(
+                jobSeeker
+        );
 
         try {
 
-            if (file != null && !file.isEmpty()) {
+            if (
+                    file != null
+                            && !file.isEmpty()
+            ) {
 
                 String filePath =
-                        fileStorageService.storeJobSeekerResume(
-                                file,
-                                jobSeeker.getId()
-                        );
+                        fileStorageService
+                                .storeJobSeekerResume(
+                                        file,
+                                        jobSeeker.getId()
+                                );
 
-                resume.setFilePath(filePath);
-                resume.setFileName(file.getOriginalFilename());
+                resume.setFilePath(
+                        filePath
+                );
+
+                resume.setFileName(
+                        file.getOriginalFilename()
+                );
+
                 resume.setFileSize(
-                        fileStorageService.getFileSize(file)
+                        fileStorageService
+                                .getFileSize(file)
                 );
+
                 resume.setContentType(
-                        fileStorageService.getContentType(file)
+                        fileStorageService
+                                .getContentType(file)
                 );
 
-            } else if (resumeUrl != null
-                    && !resumeUrl.trim().isEmpty()) {
+            } else if (
+                    resumeUrl != null
+                            && !resumeUrl
+                            .trim()
+                            .isEmpty()
+            ) {
 
-                resume.setResumeUrl(resumeUrl);
+                resume.setResumeUrl(
+                        resumeUrl.trim()
+                );
             }
 
             return resume;
@@ -668,31 +1046,45 @@ public class JobSeekerServiceImpl implements JobSeekerService {
             MultipartFile file
     ) {
 
-        Resume existing = jobSeeker.getResume();
+        Resume existing =
+                jobSeeker.getResume();
 
         try {
 
             if (existing != null) {
 
-                deletePhysicalFile(existing.getFilePath());
+                deletePhysicalFile(
+                        existing.getFilePath()
+                );
 
                 String filePath =
-                        fileStorageService.storeJobSeekerResume(
-                                file,
-                                jobSeeker.getId()
-                        );
+                        fileStorageService
+                                .storeJobSeekerResume(
+                                        file,
+                                        jobSeeker.getId()
+                                );
 
-                existing.setFilePath(filePath);
-                existing.setFileName(file.getOriginalFilename());
+                existing.setFilePath(
+                        filePath
+                );
+
+                existing.setFileName(
+                        file.getOriginalFilename()
+                );
+
                 existing.setFileSize(
-                        fileStorageService.getFileSize(file)
-                );
-                existing.setContentType(
-                        fileStorageService.getContentType(file)
+                        fileStorageService
+                                .getFileSize(file)
                 );
 
-                // File takes priority over URL
-                existing.setResumeUrl(null);
+                existing.setContentType(
+                        fileStorageService
+                                .getContentType(file)
+                );
+
+                existing.setResumeUrl(
+                        null
+                );
 
             } else {
 
@@ -703,7 +1095,9 @@ public class JobSeekerServiceImpl implements JobSeekerService {
                                 null
                         );
 
-                jobSeeker.setResume(resume);
+                jobSeeker.setResume(
+                        resume
+                );
             }
 
         } catch (IOException e) {
@@ -721,20 +1115,37 @@ public class JobSeekerServiceImpl implements JobSeekerService {
             String resumeUrl
     ) {
 
-        Resume resume = jobSeeker.getResume();
+        if (
+                resumeUrl == null
+                        || resumeUrl
+                        .trim()
+                        .isEmpty()
+        ) {
+            return;
+        }
+
+        Resume resume =
+                jobSeeker.getResume();
 
         if (resume == null) {
 
-            resume = new Resume();
+            resume =
+                    new Resume();
 
-            resume.setJobSeeker(jobSeeker);
-            resume.setResumeUrl(resumeUrl);
+            resume.setJobSeeker(
+                    jobSeeker
+            );
 
-            jobSeeker.setResume(resume);
+            resume.setResumeUrl(
+                    resumeUrl.trim()
+            );
+
+            jobSeeker.setResume(
+                    resume
+            );
 
         } else {
 
-            // Remove old physical file
             deletePhysicalFile(
                     resume.getFilePath()
             );
@@ -743,7 +1154,10 @@ public class JobSeekerServiceImpl implements JobSeekerService {
             resume.setFileName(null);
             resume.setFileSize(null);
             resume.setContentType(null);
-            resume.setResumeUrl(resumeUrl);
+
+            resume.setResumeUrl(
+                    resumeUrl.trim()
+            );
         }
     }
 
@@ -763,13 +1177,17 @@ public class JobSeekerServiceImpl implements JobSeekerService {
                 resume.getFilePath()
         );
 
-        jobSeeker.setResume(null);
+        jobSeeker.setResume(
+                null
+        );
+
+        entityManager.flush();
     }
 
 
-    // ============================================================
+    // =============================================================
     // SKILLS
-    // ============================================================
+    // =============================================================
 
     private void addSkills(
             JobSeeker jobSeeker,
@@ -780,23 +1198,61 @@ public class JobSeekerServiceImpl implements JobSeekerService {
             return;
         }
 
-        int displayOrder = 0;
+        Map<String, String> uniqueSkills =
+                new LinkedHashMap<>();
 
         for (String skillName : skills) {
 
-            if (skillName == null
-                    || skillName.trim().isEmpty()) {
+            if (
+                    skillName == null
+                            || skillName
+                            .trim()
+                            .isEmpty()
+            ) {
                 continue;
             }
 
-            JobSeekerSkill skill = new JobSeekerSkill();
+            String trimmed =
+                    skillName.trim();
 
-            skill.setJobSeeker(jobSeeker);
-            skill.setSkillName(skillName.trim());
+            String normalized =
+                    trimmed.toLowerCase(
+                            Locale.ROOT
+                    );
+
+            uniqueSkills.putIfAbsent(
+                    normalized,
+                    trimmed
+            );
+        }
+
+        int displayOrder = 0;
+
+        for (
+                String skillName
+                : uniqueSkills.values()
+        ) {
+
+            JobSeekerSkill skill =
+                    new JobSeekerSkill();
+
+            skill.setJobSeeker(
+                    jobSeeker
+            );
+
+            skill.setSkillName(
+                    skillName
+            );
+
             skill.setActive(true);
-            skill.setDisplayOrder(displayOrder++);
 
-            jobSeeker.addSkill(skill);
+            skill.setDisplayOrder(
+                    displayOrder++
+            );
+
+            jobSeeker.addSkill(
+                    skill
+            );
         }
     }
 
@@ -806,19 +1262,30 @@ public class JobSeekerServiceImpl implements JobSeekerService {
             List<String> skills
     ) {
 
-        /*
-         * orphanRemoval=true
-         * removes old child records.
-         */
-        jobSeeker.getSkills().clear();
+        Long jobSeekerId =
+                jobSeeker.getId();
 
-        addSkills(jobSeeker, skills);
+        jobSeekerSkillRepository
+                .deleteAllByJobSeekerId(
+                        jobSeekerId
+                );
+
+        jobSeekerSkillRepository.flush();
+
+        jobSeeker
+                .getSkills()
+                .clear();
+
+        addSkills(
+                jobSeeker,
+                skills
+        );
     }
 
 
-    // ============================================================
+    // =============================================================
     // SOCIAL PROFILES
-    // ============================================================
+    // =============================================================
 
     private void addSocialProfiles(
             JobSeeker jobSeeker,
@@ -829,12 +1296,89 @@ public class JobSeekerServiceImpl implements JobSeekerService {
             return;
         }
 
-        for (SocialProfileRequest request : profiles) {
+        Set<SocialPlatform> addedPlatforms =
+                new LinkedHashSet<>();
+
+        for (
+                SocialProfileRequest request
+                : profiles
+        ) {
+
+            if (request == null) {
+                continue;
+            }
+
+            if (
+                    request.getPlatform() == null
+                            || request
+                            .getPlatform()
+                            .trim()
+                            .isEmpty()
+            ) {
+                continue;
+            }
+
+            if (
+                    request.getUrl() == null
+                            || request
+                            .getUrl()
+                            .trim()
+                            .isEmpty()
+            ) {
+                continue;
+            }
+
+            String platformValue =
+                    request.getPlatform()
+                            .trim()
+                            .toUpperCase(
+                                    Locale.ROOT
+                            );
+
+            String url =
+                    request.getUrl()
+                            .trim();
+
+            SocialPlatform platform;
+
+            try {
+
+                platform =
+                        SocialPlatform.valueOf(
+                                platformValue
+                        );
+
+            } catch (
+                    IllegalArgumentException e
+            ) {
+
+                continue;
+            }
+
+            if (!addedPlatforms.add(platform)) {
+                continue;
+            }
 
             JobSeekerSocialProfile profile =
-                    jobSeekerMapper.toSocialProfileEntity(request);
+                    new JobSeekerSocialProfile();
 
-            jobSeeker.addSocialProfile(profile);
+            profile.setJobSeeker(
+                    jobSeeker
+            );
+
+            profile.setPlatform(
+                    platform
+            );
+
+            profile.setUrl(
+                    url
+            );
+
+            profile.setActive(true);
+
+            jobSeeker.addSocialProfile(
+                    profile
+            );
         }
     }
 
@@ -844,11 +1388,19 @@ public class JobSeekerServiceImpl implements JobSeekerService {
             List<SocialProfileRequest> profiles
     ) {
 
-        /*
-         * Remove existing managed entities.
-         * orphanRemoval=true will delete them.
-         */
-        jobSeeker.getSocialProfiles().clear();
+        Long jobSeekerId =
+                jobSeeker.getId();
+
+        jobSeekerSocialProfileRepository
+                .deleteAllByJobSeekerId(
+                        jobSeekerId
+                );
+
+        jobSeekerSocialProfileRepository.flush();
+
+        jobSeeker
+                .getSocialProfiles()
+                .clear();
 
         addSocialProfiles(
                 jobSeeker,
@@ -857,9 +1409,9 @@ public class JobSeekerServiceImpl implements JobSeekerService {
     }
 
 
-    // ============================================================
+    // =============================================================
     // CURRENT USER
-    // ============================================================
+    // =============================================================
 
     private User getCurrentUser() {
 
@@ -868,20 +1420,23 @@ public class JobSeekerServiceImpl implements JobSeekerService {
                         .getContext()
                         .getAuthentication();
 
-        if (authentication == null
-                || !authentication.isAuthenticated()) {
+        if (
+                authentication == null
+                        || !authentication.isAuthenticated()
+        ) {
 
             throw new BusinessException(
                     ErrorCode.INVALID_CREDENTIALS
             );
         }
 
-        String email = authentication.getName();
+        String email =
+                authentication.getName();
 
         return userRepository
                 .findByEmail(email)
-                .orElseThrow(() ->
-                        new BusinessException(
+                .orElseThrow(
+                        () -> new BusinessException(
                                 ErrorCode.USER_NOT_FOUND
                         )
                 );
@@ -894,39 +1449,46 @@ public class JobSeekerServiceImpl implements JobSeekerService {
 
         return jobSeekerRepository
                 .findByUserId(user.getId())
-                .orElseThrow(() ->
-                        new BusinessException(
+                .orElseThrow(
+                        () -> new BusinessException(
                                 ErrorCode.JOB_SEEKER_NOT_FOUND
                         )
                 );
     }
 
 
-    // ============================================================
+    // =============================================================
     // FILE DELETE
-    // ============================================================
+    // =============================================================
 
     private void deletePhysicalFile(
             String filePath
     ) {
 
-        if (filePath == null
-                || filePath.trim().isEmpty()) {
+        if (
+                filePath == null
+                        || filePath.trim().isEmpty()
+        ) {
             return;
         }
 
         try {
 
-            if (fileStorageService.fileExists(filePath)) {
+            if (
+                    fileStorageService
+                            .fileExists(filePath)
+            ) {
 
-                fileStorageService.deleteFile(filePath);
+                fileStorageService.deleteFile(
+                        filePath
+                );
             }
 
         } catch (Exception ignored) {
 
             /*
-             * Do not stop database operation if
-             * physical file is already missing.
+             * Physical file deletion failure should
+             * not break the database transaction.
              */
         }
     }

@@ -3,7 +3,10 @@ package com.texas.smart.job.portal.modules.job.dto.request;
 import com.texas.smart.job.portal.common.enums.JobLevel;
 import com.texas.smart.job.portal.common.enums.JobType;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -96,14 +99,18 @@ public class JobUpdateRequest {
     )
     private String educationRequired;
 
-    @Positive(message = "Vacancies must be greater than zero")
+    @Positive(
+            message = "Vacancies must be greater than zero"
+    )
     private Integer vacancies;
 
     // =============================================================
     // Application
     // =============================================================
 
-    @Future(message = "Application deadline must be in the future")
+    @Future(
+            message = "Application deadline must be in the future"
+    )
     private LocalDateTime applicationDeadline;
 
     // =============================================================

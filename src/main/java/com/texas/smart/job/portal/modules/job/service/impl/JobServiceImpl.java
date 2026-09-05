@@ -12,11 +12,12 @@ import com.texas.smart.job.portal.modules.job.dto.request.JobSkillRequest;
 import com.texas.smart.job.portal.modules.job.dto.request.JobUpdateRequest;
 import com.texas.smart.job.portal.modules.job.dto.response.JobResponse;
 import com.texas.smart.job.portal.modules.job.entity.Job;
-import com.texas.smart.job.portal.modules.job.entity.JobAttachment;
 import com.texas.smart.job.portal.modules.job.entity.JobBenefit;
 import com.texas.smart.job.portal.modules.job.entity.JobSkill;
 import com.texas.smart.job.portal.modules.job.mapper.JobMapper;
+import com.texas.smart.job.portal.modules.job.repository.JobBenefitRepository;
 import com.texas.smart.job.portal.modules.job.repository.JobRepository;
+import com.texas.smart.job.portal.modules.job.repository.JobSkillRepository;
 import com.texas.smart.job.portal.modules.job.service.JobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,9 +26,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +40,11 @@ public class JobServiceImpl implements JobService {
     private final JobRepository jobRepository;
     private final CompanyRepository companyRepository;
     private final JobMapper jobMapper;
+
+    // NEW REPOSITORIES
+    private final JobSkillRepository jobSkillRepository;
+    private final JobBenefitRepository jobBenefitRepository;
+
 
     // =============================================================
     // CREATE JOB
@@ -54,6 +62,7 @@ public class JobServiceImpl implements JobService {
 
         Job job = Job.builder()
                 .company(company)
+
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .responsibilities(request.getResponsibilities())
@@ -80,7 +89,9 @@ public class JobServiceImpl implements JobService {
                 .educationRequired(request.getEducationRequired())
                 .vacancies(request.getVacancies())
 
-                .applicationDeadline(request.getApplicationDeadline())
+                .applicationDeadline(
+                        request.getApplicationDeadline()
+                )
 
                 .status(JobStatus.PENDING)
                 .active(true)
@@ -101,11 +112,14 @@ public class JobServiceImpl implements JobService {
 
                 .build();
 
-        // ---------------------------------------------------------
+
+        // =========================================================
         // REQUIRED SKILLS
-        // ---------------------------------------------------------
+        // =========================================================
 
         if (request.getRequiredSkills() != null) {
+
+            Set<String> skillNames = new HashSet<>();
 
             for (JobSkillRequest skillRequest :
                     request.getRequiredSkills()) {
@@ -114,8 +128,24 @@ public class JobServiceImpl implements JobService {
                     continue;
                 }
 
+                if (skillRequest.getSkillName() == null ||
+                        skillRequest.getSkillName().trim().isEmpty()) {
+                    continue;
+                }
+
+                String skillName =
+                        skillRequest.getSkillName().trim();
+
+                String normalizedSkillName =
+                        skillName.toLowerCase(Locale.ROOT);
+
+                // Prevent duplicate skills
+                if (!skillNames.add(normalizedSkillName)) {
+                    continue;
+                }
+
                 JobSkill skill = JobSkill.builder()
-                        .skillName(skillRequest.getSkillName())
+                        .skillName(skillName)
                         .required(
                                 skillRequest.getRequired() != null
                                         ? skillRequest.getRequired()
@@ -132,9 +162,10 @@ public class JobServiceImpl implements JobService {
             }
         }
 
-        // ---------------------------------------------------------
+
+        // =========================================================
         // BENEFITS
-        // ---------------------------------------------------------
+        // =========================================================
 
         if (request.getBenefits() != null) {
 
@@ -145,9 +176,16 @@ public class JobServiceImpl implements JobService {
                     continue;
                 }
 
+                if (benefitRequest.getBenefitName() == null ||
+                        benefitRequest.getBenefitName().trim().isEmpty()) {
+                    continue;
+                }
+
                 JobBenefit benefit = JobBenefit.builder()
                         .benefitName(
-                                benefitRequest.getBenefitName()
+                                benefitRequest
+                                        .getBenefitName()
+                                        .trim()
                         )
                         .description(
                                 benefitRequest.getDescription()
@@ -163,10 +201,12 @@ public class JobServiceImpl implements JobService {
             }
         }
 
+
         Job savedJob = jobRepository.save(job);
 
         return jobMapper.toResponse(savedJob);
     }
+
 
     // =============================================================
     // GET JOB
@@ -180,6 +220,7 @@ public class JobServiceImpl implements JobService {
 
         return jobMapper.toResponse(job);
     }
+
 
     // =============================================================
     // UPDATE JOB
@@ -201,7 +242,9 @@ public class JobServiceImpl implements JobService {
         );
 
         updateBasicInformation(job, request);
+
         updateSkills(job, request);
+
         updateBenefits(job, request);
 
         job.setLastUpdatedDate(LocalDateTime.now());
@@ -210,6 +253,7 @@ public class JobServiceImpl implements JobService {
 
         return jobMapper.toResponse(savedJob);
     }
+
 
     // =============================================================
     // DELETE JOB
@@ -225,6 +269,7 @@ public class JobServiceImpl implements JobService {
         jobRepository.delete(job);
     }
 
+
     // =============================================================
     // GET ALL JOBS
     // =============================================================
@@ -238,7 +283,8 @@ public class JobServiceImpl implements JobService {
 
         Page<Job> page;
 
-        if (search != null && !search.trim().isEmpty()) {
+        if (search != null &&
+                !search.trim().isEmpty()) {
 
             page = jobRepository.searchJobs(
                     search.trim(),
@@ -252,6 +298,7 @@ public class JobServiceImpl implements JobService {
 
         return buildPageResponse(page);
     }
+
 
     // =============================================================
     // GET MY JOBS
@@ -268,7 +315,8 @@ public class JobServiceImpl implements JobService {
 
         Page<Job> page;
 
-        if (search != null && !search.trim().isEmpty()) {
+        if (search != null &&
+                !search.trim().isEmpty()) {
 
             page = jobRepository.searchByCompany(
                     company.getId(),
@@ -287,6 +335,7 @@ public class JobServiceImpl implements JobService {
         return buildPageResponse(page);
     }
 
+
     // =============================================================
     // GET PUBLISHED JOBS
     // =============================================================
@@ -300,7 +349,8 @@ public class JobServiceImpl implements JobService {
 
         Page<Job> page;
 
-        if (search != null && !search.trim().isEmpty()) {
+        if (search != null &&
+                !search.trim().isEmpty()) {
 
             page = jobRepository.searchPublishedJobs(
                     search.trim(),
@@ -317,6 +367,7 @@ public class JobServiceImpl implements JobService {
 
         return buildPageResponse(page);
     }
+
 
     // =============================================================
     // GET JOBS BY COMPANY
@@ -337,6 +388,7 @@ public class JobServiceImpl implements JobService {
 
         return buildPageResponse(page);
     }
+
 
     // =============================================================
     // PUBLISH JOB
@@ -364,19 +416,25 @@ public class JobServiceImpl implements JobService {
         }
 
         job.setStatus(JobStatus.ACTIVE);
+
         job.setActive(true);
 
         if (job.getPostedDate() == null) {
 
-            job.setPostedDate(LocalDateTime.now());
+            job.setPostedDate(
+                    LocalDateTime.now()
+            );
         }
 
-        job.setLastUpdatedDate(LocalDateTime.now());
+        job.setLastUpdatedDate(
+                LocalDateTime.now()
+        );
 
         return jobMapper.toResponse(
                 jobRepository.save(job)
         );
     }
+
 
     // =============================================================
     // CLOSE JOB
@@ -389,19 +447,19 @@ public class JobServiceImpl implements JobService {
 
         validateJobOwnership(job);
 
-        if (!Boolean.TRUE.equals(job.getActive())) {
-
+        if (job.getStatus() == JobStatus.CLOSED) {
             throw new BusinessException(
                     ErrorCode.JOB_ALREADY_CLOSED
             );
         }
 
+        job.setStatus(JobStatus.CLOSED);
         job.setActive(false);
         job.setLastUpdatedDate(LocalDateTime.now());
 
-        return jobMapper.toResponse(
-                jobRepository.save(job)
-        );
+        Job savedJob = jobRepository.saveAndFlush(job);
+
+        return jobMapper.toResponse(savedJob);
     }
 
     // =============================================================
@@ -457,78 +515,6 @@ public class JobServiceImpl implements JobService {
         return jobMapper.toResponse(savedJob);
     }
 
-    // =============================================================
-    // ADD ATTACHMENT
-    // =============================================================
-
-    @Override
-    public JobResponse addAttachment(
-            Long jobId,
-            MultipartFile file,
-            String description,
-            Integer displayOrder
-    ) {
-
-        Job job = findJobById(jobId);
-
-        validateJobOwnership(job);
-
-        if (file == null || file.isEmpty()) {
-
-            throw new BusinessException(
-                    ErrorCode.FILE_REQUIRED
-            );
-        }
-
-        /*
-         * FileStorageService will be connected here.
-         *
-         * Current implementation intentionally throws
-         * FILE_UPLOAD_FAILED until file storage is injected.
-         */
-
-        throw new BusinessException(
-                ErrorCode.FILE_UPLOAD_FAILED
-        );
-    }
-
-    // =============================================================
-    // REMOVE ATTACHMENT
-    // =============================================================
-
-    @Override
-    public void removeAttachment(
-            Long jobId,
-            Long attachmentId
-    ) {
-
-        Job job = findJobById(jobId);
-
-        validateJobOwnership(job);
-
-        JobAttachment attachment =
-                job.getAttachments()
-                        .stream()
-                        .filter(item ->
-                                item.getId() != null &&
-                                        item.getId().equals(attachmentId)
-                        )
-                        .findFirst()
-                        .orElseThrow(() ->
-                                new BusinessException(
-                                        ErrorCode.FILE_NOT_FOUND
-                                )
-                        );
-
-        /*
-         * Physical file deletion should be handled
-         * through FileStorageService.
-         */
-
-        job.removeAttachment(attachment);
-
-        jobRepository.save(job);
-    }
 
     // =============================================================
     // FIND JOB
@@ -544,6 +530,7 @@ public class JobServiceImpl implements JobService {
                 );
     }
 
+
     // =============================================================
     // OWNERSHIP
     // =============================================================
@@ -554,6 +541,7 @@ public class JobServiceImpl implements JobService {
                 getCurrentUserCompany();
 
         if (job.getCompany() == null ||
+                job.getCompany().getId() == null ||
                 !job.getCompany()
                         .getId()
                         .equals(currentCompany.getId())) {
@@ -563,6 +551,7 @@ public class JobServiceImpl implements JobService {
             );
         }
     }
+
 
     // =============================================================
     // CURRENT COMPANY
@@ -583,18 +572,9 @@ public class JobServiceImpl implements JobService {
             );
         }
 
-        String email = authentication.getName();
+        String email =
+                authentication.getName();
 
-        /*
-         * IMPORTANT:
-         *
-         * Authentication uses User.email.
-         * Company is connected to User through:
-         *
-         * Company -> User -> email
-         *
-         * Therefore we must search by User email.
-         */
         return companyRepository
                 .findByUserEmail(email)
                 .orElseThrow(() ->
@@ -603,6 +583,7 @@ public class JobServiceImpl implements JobService {
                         )
                 );
     }
+
 
     // =============================================================
     // UPDATE BASIC INFORMATION
@@ -614,138 +595,118 @@ public class JobServiceImpl implements JobService {
     ) {
 
         if (request.getTitle() != null) {
-
-            job.setTitle(
-                    request.getTitle()
-            );
+            job.setTitle(request.getTitle());
         }
 
         if (request.getDescription() != null) {
-
             job.setDescription(
                     request.getDescription()
             );
         }
 
         if (request.getResponsibilities() != null) {
-
             job.setResponsibilities(
                     request.getResponsibilities()
             );
         }
 
         if (request.getRequirements() != null) {
-
             job.setRequirements(
                     request.getRequirements()
             );
         }
 
         if (request.getLocation() != null) {
-
             job.setLocation(
                     request.getLocation()
             );
         }
 
         if (request.getAddress() != null) {
-
             job.setAddress(
                     request.getAddress()
             );
         }
 
         if (request.getSalaryMin() != null) {
-
             job.setSalaryMin(
                     request.getSalaryMin()
             );
         }
 
         if (request.getSalaryMax() != null) {
-
             job.setSalaryMax(
                     request.getSalaryMax()
             );
         }
 
         if (request.getSalaryCurrency() != null) {
-
             job.setSalaryCurrency(
                     request.getSalaryCurrency()
             );
         }
 
         if (request.getSalaryNegotiable() != null) {
-
             job.setSalaryNegotiable(
                     request.getSalaryNegotiable()
             );
         }
 
         if (request.getJobType() != null) {
-
             job.setJobType(
                     request.getJobType()
             );
         }
 
         if (request.getJobLevel() != null) {
-
             job.setJobLevel(
                     request.getJobLevel()
             );
         }
 
         if (request.getExperienceRequired() != null) {
-
             job.setExperienceRequired(
                     request.getExperienceRequired()
             );
         }
 
         if (request.getEducationRequired() != null) {
-
             job.setEducationRequired(
                     request.getEducationRequired()
             );
         }
 
         if (request.getVacancies() != null) {
-
             job.setVacancies(
                     request.getVacancies()
             );
         }
 
         if (request.getApplicationDeadline() != null) {
-
             job.setApplicationDeadline(
                     request.getApplicationDeadline()
             );
         }
 
         if (request.getActive() != null) {
-
             job.setActive(
                     request.getActive()
             );
         }
 
         if (request.getFeatured() != null) {
-
             job.setFeatured(
                     request.getFeatured()
             );
         }
 
         if (request.getUrgent() != null) {
-
             job.setUrgent(
                     request.getUrgent()
             );
         }
     }
+
 
     // =============================================================
     // UPDATE SKILLS
@@ -756,11 +717,59 @@ public class JobServiceImpl implements JobService {
             JobUpdateRequest request
     ) {
 
+        /*
+         * IMPORTANT:
+         *
+         * null = skills were not included in PATCH
+         *        -> keep existing skills
+         *
+         * []   = explicitly remove all skills
+         *
+         * [..] = replace all existing skills
+         */
+
         if (request.getRequiredSkills() == null) {
             return;
         }
 
+        Long jobId = job.getId();
+
+
+        // ---------------------------------------------------------
+        // STEP 1: DELETE EXISTING SKILLS FROM DATABASE
+        // ---------------------------------------------------------
+
+        jobSkillRepository.deleteAllByJobId(jobId);
+
+
+        // ---------------------------------------------------------
+        // STEP 2: FORCE DELETE TO DATABASE
+        //
+        // This is the important part that fixes:
+        //
+        // Duplicate entry '4-next js'
+        // ---------------------------------------------------------
+
+        jobSkillRepository.flush();
+
+
+        // ---------------------------------------------------------
+        // STEP 3: CLEAR JPA COLLECTION
+        // ---------------------------------------------------------
+
         job.getRequiredSkills().clear();
+
+
+        // ---------------------------------------------------------
+        // STEP 4: TRACK DUPLICATE SKILLS
+        // ---------------------------------------------------------
+
+        Set<String> skillNames = new HashSet<>();
+
+
+        // ---------------------------------------------------------
+        // STEP 5: INSERT NEW SKILLS
+        // ---------------------------------------------------------
 
         for (JobSkillRequest skillRequest :
                 request.getRequiredSkills()) {
@@ -769,25 +778,79 @@ public class JobServiceImpl implements JobService {
                 continue;
             }
 
-            JobSkill skill = JobSkill.builder()
-                    .skillName(
-                            skillRequest.getSkillName()
-                    )
-                    .required(
-                            skillRequest.getRequired() != null
-                                    ? skillRequest.getRequired()
-                                    : true
-                    )
-                    .displayOrder(
-                            skillRequest.getDisplayOrder() != null
-                                    ? skillRequest.getDisplayOrder()
-                                    : 0
-                    )
-                    .build();
+            if (skillRequest.getSkillName() == null ||
+                    skillRequest.getSkillName()
+                            .trim()
+                            .isEmpty()) {
+
+                continue;
+            }
+
+
+            String skillName =
+                    skillRequest
+                            .getSkillName()
+                            .trim();
+
+
+            /*
+             * Normalize only for duplicate checking.
+             *
+             * Example:
+             *
+             * Next JS
+             * next js
+             * NEXT JS
+             *
+             * are considered the same.
+             */
+
+            String normalizedSkillName =
+                    skillName.toLowerCase(
+                            Locale.ROOT
+                    );
+
+
+            // -----------------------------------------------------
+            // SKIP DUPLICATE SKILL
+            // -----------------------------------------------------
+
+            if (!skillNames.add(
+                    normalizedSkillName
+            )) {
+
+                continue;
+            }
+
+
+            // -----------------------------------------------------
+            // CREATE NEW SKILL
+            // -----------------------------------------------------
+
+            JobSkill skill =
+                    JobSkill.builder()
+                            .skillName(skillName)
+                            .required(
+                                    skillRequest.getRequired() != null
+                                            ? skillRequest.getRequired()
+                                            : true
+                            )
+                            .displayOrder(
+                                    skillRequest.getDisplayOrder() != null
+                                            ? skillRequest.getDisplayOrder()
+                                            : 0
+                            )
+                            .build();
+
+
+            // -----------------------------------------------------
+            // CONNECT SKILL TO JOB
+            // -----------------------------------------------------
 
             job.addRequiredSkill(skill);
         }
     }
+
 
     // =============================================================
     // UPDATE BENEFITS
@@ -798,11 +861,46 @@ public class JobServiceImpl implements JobService {
             JobUpdateRequest request
     ) {
 
+        /*
+         * null = benefits were not included
+         *       -> keep existing benefits
+         *
+         * []   = remove all benefits
+         *
+         * [..] = replace all benefits
+         */
+
         if (request.getBenefits() == null) {
             return;
         }
 
+        Long jobId = job.getId();
+
+
+        // ---------------------------------------------------------
+        // STEP 1: DELETE EXISTING BENEFITS
+        // ---------------------------------------------------------
+
+        jobBenefitRepository.deleteAllByJobId(jobId);
+
+
+        // ---------------------------------------------------------
+        // STEP 2: FORCE DELETE
+        // ---------------------------------------------------------
+
+        jobBenefitRepository.flush();
+
+
+        // ---------------------------------------------------------
+        // STEP 3: CLEAR JPA COLLECTION
+        // ---------------------------------------------------------
+
         job.getBenefits().clear();
+
+
+        // ---------------------------------------------------------
+        // STEP 4: ADD NEW BENEFITS
+        // ---------------------------------------------------------
 
         for (JobBenefitRequest benefitRequest :
                 request.getBenefits()) {
@@ -811,23 +909,42 @@ public class JobServiceImpl implements JobService {
                 continue;
             }
 
-            JobBenefit benefit = JobBenefit.builder()
-                    .benefitName(
-                            benefitRequest.getBenefitName()
-                    )
-                    .description(
-                            benefitRequest.getDescription()
-                    )
-                    .displayOrder(
-                            benefitRequest.getDisplayOrder() != null
-                                    ? benefitRequest.getDisplayOrder()
-                                    : 0
-                    )
-                    .build();
+            if (benefitRequest.getBenefitName() == null ||
+                    benefitRequest.getBenefitName()
+                            .trim()
+                            .isEmpty()) {
+
+                continue;
+            }
+
+
+            JobBenefit benefit =
+                    JobBenefit.builder()
+                            .benefitName(
+                                    benefitRequest
+                                            .getBenefitName()
+                                            .trim()
+                            )
+                            .description(
+                                    benefitRequest
+                                            .getDescription()
+                            )
+                            .displayOrder(
+                                    benefitRequest.getDisplayOrder() != null
+                                            ? benefitRequest.getDisplayOrder()
+                                            : 0
+                            )
+                            .build();
+
+
+            // -----------------------------------------------------
+            // CONNECT BENEFIT TO JOB
+            // -----------------------------------------------------
 
             job.addBenefit(benefit);
         }
     }
+
 
     // =============================================================
     // SALARY VALIDATION
@@ -847,6 +964,7 @@ public class JobServiceImpl implements JobService {
             );
         }
     }
+
 
     // =============================================================
     // PAGE RESPONSE

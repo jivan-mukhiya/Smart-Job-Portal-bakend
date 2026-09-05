@@ -5,7 +5,6 @@ import com.texas.smart.job.portal.modules.job.dto.request.JobRequest;
 import com.texas.smart.job.portal.modules.job.dto.request.JobUpdateRequest;
 import com.texas.smart.job.portal.modules.job.dto.response.JobResponse;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.multipart.MultipartFile;
 
 public interface JobService {
 
@@ -13,7 +12,10 @@ public interface JobService {
 
     JobResponse getJob(Long jobId);
 
-    JobResponse updateJob(Long jobId, JobUpdateRequest request);
+    JobResponse updateJob(
+            Long jobId,
+            JobUpdateRequest request
+    );
 
     void deleteJob(Long jobId);
 
@@ -44,17 +46,5 @@ public interface JobService {
     JobResponse updateJobStatus(
             Long jobId,
             String status
-    );
-
-    JobResponse addAttachment(
-            Long jobId,
-            MultipartFile file,
-            String description,
-            Integer displayOrder
-    );
-
-    void removeAttachment(
-            Long jobId,
-            Long attachmentId
     );
 }

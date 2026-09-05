@@ -2,26 +2,39 @@ package com.texas.smart.job.portal.modules.jobseeker.controller;
 
 import com.texas.smart.job.portal.common.response.ApiResponse;
 import com.texas.smart.job.portal.common.response.PageResponse;
+
 import com.texas.smart.job.portal.modules.jobseeker.dto.request.JobSeekerRequest;
 import com.texas.smart.job.portal.modules.jobseeker.dto.request.JobSeekerUpdateRequest;
+
 import com.texas.smart.job.portal.modules.jobseeker.dto.response.JobSeekerResponse;
+import com.texas.smart.job.portal.modules.jobseeker.dto.response.ResumeResponse;
+
 import com.texas.smart.job.portal.modules.jobseeker.service.JobSeekerService;
+
 import jakarta.validation.Valid;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.security.access.prepost.PreAuthorize;
+
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
 
 @RestController
 @RequestMapping("/job-seekers")
 @RequiredArgsConstructor
 public class JobSeekerController {
 
+
     private final JobSeekerService jobSeekerService;
+
 
     // ============================================================
     // JOB SEEKER
@@ -32,12 +45,15 @@ public class JobSeekerController {
      */
     @PostMapping
     @PreAuthorize("hasRole('JOB_SEEKER')")
-    public ResponseEntity<ApiResponse<JobSeekerResponse>> createJobSeeker(
+    public ResponseEntity<ApiResponse<JobSeekerResponse>>
+    createJobSeeker(
             @Valid @ModelAttribute JobSeekerRequest request
     ) {
 
         JobSeekerResponse response =
-                jobSeekerService.createJobSeeker(request);
+                jobSeekerService.createJobSeeker(
+                        request
+                );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -49,12 +65,14 @@ public class JobSeekerController {
                 );
     }
 
+
     /**
      * Get currently authenticated job seeker's profile.
      */
     @GetMapping("/me")
     @PreAuthorize("hasRole('JOB_SEEKER')")
-    public ResponseEntity<ApiResponse<JobSeekerResponse>> getMyProfile() {
+    public ResponseEntity<ApiResponse<JobSeekerResponse>>
+    getMyProfile() {
 
         JobSeekerResponse response =
                 jobSeekerService.getMyProfile();
@@ -67,17 +85,21 @@ public class JobSeekerController {
         );
     }
 
+
     /**
      * Update currently authenticated job seeker's profile.
      */
     @PutMapping("/me")
     @PreAuthorize("hasRole('JOB_SEEKER')")
-    public ResponseEntity<ApiResponse<JobSeekerResponse>> updateMyProfile(
+    public ResponseEntity<ApiResponse<JobSeekerResponse>>
+    updateMyProfile(
             @Valid @ModelAttribute JobSeekerUpdateRequest request
     ) {
 
         JobSeekerResponse response =
-                jobSeekerService.updateMyProfile(request);
+                jobSeekerService.updateMyProfile(
+                        request
+                );
 
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -87,12 +109,14 @@ public class JobSeekerController {
         );
     }
 
+
     /**
      * Delete currently authenticated job seeker's profile.
      */
     @DeleteMapping("/me")
     @PreAuthorize("hasRole('JOB_SEEKER')")
-    public ResponseEntity<ApiResponse<Void>> deleteMyProfile() {
+    public ResponseEntity<ApiResponse<Void>>
+    deleteMyProfile() {
 
         jobSeekerService.deleteMyProfile();
 
@@ -103,6 +127,44 @@ public class JobSeekerController {
         );
     }
 
+
+    // ============================================================
+    // MY RESUME
+    // ============================================================
+
+    /**
+     * Get the resume belonging to the currently authenticated
+     * job seeker.
+     *
+     * Security:
+     *
+     * 1. Endpoint requires JOB_SEEKER role.
+     * 2. No jobSeekerId is accepted from the client.
+     * 3. Service obtains the current authenticated user.
+     * 4. Service finds the JobSeeker belonging to that user.
+     * 5. Service returns only that JobSeeker's resume.
+     *
+     * Endpoint:
+     *
+     * GET /api/v1/job-seekers/me/resume
+     */
+    @GetMapping("/me/resume")
+    @PreAuthorize("hasRole('JOB_SEEKER')")
+    public ResponseEntity<ApiResponse<ResumeResponse>>
+    getMyResume() {
+
+        ResumeResponse response =
+                jobSeekerService.getMyResume();
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Resume retrieved successfully",
+                        response
+                )
+        );
+    }
+
+
     // ============================================================
     // PROFILE IMAGE
     // ============================================================
@@ -112,12 +174,15 @@ public class JobSeekerController {
      */
     @PutMapping("/me/profile-image")
     @PreAuthorize("hasRole('JOB_SEEKER')")
-    public ResponseEntity<ApiResponse<JobSeekerResponse>> updateProfileImage(
+    public ResponseEntity<ApiResponse<JobSeekerResponse>>
+    updateProfileImage(
             @RequestParam("file") MultipartFile file
     ) {
 
         JobSeekerResponse response =
-                jobSeekerService.updateProfileImage(file);
+                jobSeekerService.updateProfileImage(
+                        file
+                );
 
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -127,12 +192,14 @@ public class JobSeekerController {
         );
     }
 
+
     /**
      * Remove profile image.
      */
     @DeleteMapping("/me/profile-image")
     @PreAuthorize("hasRole('JOB_SEEKER')")
-    public ResponseEntity<ApiResponse<Void>> removeProfileImage() {
+    public ResponseEntity<ApiResponse<Void>>
+    removeProfileImage() {
 
         jobSeekerService.removeProfileImage();
 
@@ -143,8 +210,9 @@ public class JobSeekerController {
         );
     }
 
+
     // ============================================================
-    // RESUME
+    // RESUME MANAGEMENT
     // ============================================================
 
     /**
@@ -152,12 +220,15 @@ public class JobSeekerController {
      */
     @PutMapping("/me/resume")
     @PreAuthorize("hasRole('JOB_SEEKER')")
-    public ResponseEntity<ApiResponse<JobSeekerResponse>> updateResume(
+    public ResponseEntity<ApiResponse<JobSeekerResponse>>
+    updateResume(
             @RequestParam("file") MultipartFile file
     ) {
 
         JobSeekerResponse response =
-                jobSeekerService.updateResume(file);
+                jobSeekerService.updateResume(
+                        file
+                );
 
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -167,17 +238,21 @@ public class JobSeekerController {
         );
     }
 
+
     /**
-     * Set resume URL.
+     * Set external resume URL.
      */
     @PutMapping("/me/resume-url")
     @PreAuthorize("hasRole('JOB_SEEKER')")
-    public ResponseEntity<ApiResponse<JobSeekerResponse>> updateResumeUrl(
+    public ResponseEntity<ApiResponse<JobSeekerResponse>>
+    updateResumeUrl(
             @RequestParam("resumeUrl") String resumeUrl
     ) {
 
         JobSeekerResponse response =
-                jobSeekerService.updateResumeUrl(resumeUrl);
+                jobSeekerService.updateResumeUrl(
+                        resumeUrl
+                );
 
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -187,12 +262,14 @@ public class JobSeekerController {
         );
     }
 
+
     /**
      * Remove resume.
      */
     @DeleteMapping("/me/resume")
     @PreAuthorize("hasRole('JOB_SEEKER')")
-    public ResponseEntity<ApiResponse<Void>> removeResume() {
+    public ResponseEntity<ApiResponse<Void>>
+    removeResume() {
 
         jobSeekerService.removeResume();
 
@@ -203,20 +280,27 @@ public class JobSeekerController {
         );
     }
 
+
     // ============================================================
     // PUBLIC / AUTHENTICATED
     // ============================================================
 
     /**
      * Get job seeker by ID.
+     *
+     * NOTE:
+     * This endpoint does not expose the job seeker's resume.
      */
     @GetMapping("/{jobSeekerId}")
-    public ResponseEntity<ApiResponse<JobSeekerResponse>> getJobSeeker(
+    public ResponseEntity<ApiResponse<JobSeekerResponse>>
+    getJobSeeker(
             @PathVariable Long jobSeekerId
     ) {
 
         JobSeekerResponse response =
-                jobSeekerService.getJobSeekerById(jobSeekerId);
+                jobSeekerService.getJobSeekerById(
+                        jobSeekerId
+                );
 
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -226,21 +310,27 @@ public class JobSeekerController {
         );
     }
 
+
     /**
      * Get job seekers who are open to work.
      */
     @GetMapping("/open-to-work")
-    public ResponseEntity<ApiResponse<PageResponse<JobSeekerResponse>>>
+    public ResponseEntity<
+            ApiResponse<PageResponse<JobSeekerResponse>>
+            >
     getOpenToWorkJobSeekers(
-            @RequestParam(required = false) String search,
+            @RequestParam(required = false)
+            String search,
+
             Pageable pageable
     ) {
 
         Page<JobSeekerResponse> jobSeekers =
-                jobSeekerService.getOpenToWorkJobSeekers(
-                        search,
-                        pageable
-                );
+                jobSeekerService
+                        .getOpenToWorkJobSeekers(
+                                search,
+                                pageable
+                        );
 
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -249,6 +339,7 @@ public class JobSeekerController {
                 )
         );
     }
+
 
     // ============================================================
     // ADMIN
@@ -259,17 +350,22 @@ public class JobSeekerController {
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<PageResponse<JobSeekerResponse>>>
+    public ResponseEntity<
+            ApiResponse<PageResponse<JobSeekerResponse>>
+            >
     getAllJobSeekers(
-            @RequestParam(required = false) String search,
+            @RequestParam(required = false)
+            String search,
+
             Pageable pageable
     ) {
 
         Page<JobSeekerResponse> jobSeekers =
-                jobSeekerService.getAllJobSeekers(
-                        search,
-                        pageable
-                );
+                jobSeekerService
+                        .getAllJobSeekers(
+                                search,
+                                pageable
+                        );
 
         return ResponseEntity.ok(
                 ApiResponse.success(

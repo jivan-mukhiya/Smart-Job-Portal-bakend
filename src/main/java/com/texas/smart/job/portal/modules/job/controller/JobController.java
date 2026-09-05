@@ -13,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/jobs")
@@ -22,6 +21,9 @@ public class JobController {
 
     private final JobService jobService;
 
+    // =============================================================
+    // CREATE JOB
+    // =============================================================
 
     /**
      * Create Job
@@ -47,6 +49,9 @@ public class JobController {
                 );
     }
 
+    // =============================================================
+    // GET MY JOBS
+    // =============================================================
 
     /**
      * Get current company's jobs
@@ -74,6 +79,9 @@ public class JobController {
         );
     }
 
+    // =============================================================
+    // UPDATE JOB
+    // =============================================================
 
     /**
      * Update Job
@@ -104,6 +112,9 @@ public class JobController {
         );
     }
 
+    // =============================================================
+    // DELETE JOB
+    // =============================================================
 
     /**
      * Delete Job
@@ -128,6 +139,9 @@ public class JobController {
         );
     }
 
+    // =============================================================
+    // PUBLISH JOB
+    // =============================================================
 
     /**
      * Publish Job
@@ -154,6 +168,9 @@ public class JobController {
         );
     }
 
+    // =============================================================
+    // CLOSE JOB
+    // =============================================================
 
     /**
      * Close Job
@@ -180,6 +197,9 @@ public class JobController {
         );
     }
 
+    // =============================================================
+    // UPDATE JOB STATUS
+    // =============================================================
 
     /**
      * Update Job Status
@@ -210,73 +230,9 @@ public class JobController {
         );
     }
 
-
-    /**
-     * Add Job Attachment
-     *
-     * ADMIN or Job Owner
-     */
-    @PostMapping(
-            value = "/{jobId}/attachments",
-            consumes = "multipart/form-data"
-    )
-    @PreAuthorize(
-            "hasRole('ADMIN') or " +
-                    "@jobSecurityService.isJobOwner(#jobId, authentication)"
-    )
-    public ResponseEntity<ApiResponse<JobResponse>> addAttachment(
-            @PathVariable Long jobId,
-            @RequestPart("file") MultipartFile file,
-            @RequestParam(required = false) String description,
-            @RequestParam(required = false) Integer displayOrder
-    ) {
-
-        JobResponse response =
-                jobService.addAttachment(
-                        jobId,
-                        file,
-                        description,
-                        displayOrder
-                );
-
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        "Job attachment uploaded successfully",
-                        response
-                )
-        );
-    }
-
-
-    /**
-     * Remove Job Attachment
-     *
-     * ADMIN or Job Owner
-     */
-    @DeleteMapping(
-            "/{jobId}/attachments/{attachmentId}"
-    )
-    @PreAuthorize(
-            "hasRole('ADMIN') or " +
-                    "@jobSecurityService.isJobOwner(#jobId, authentication)"
-    )
-    public ResponseEntity<ApiResponse<Void>> removeAttachment(
-            @PathVariable Long jobId,
-            @PathVariable Long attachmentId
-    ) {
-
-        jobService.removeAttachment(
-                jobId,
-                attachmentId
-        );
-
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        "Job attachment removed successfully"
-                )
-        );
-    }
-
+    // =============================================================
+    // GET JOB BY ID
+    // =============================================================
 
     /**
      * Get Job by ID
@@ -299,6 +255,9 @@ public class JobController {
         );
     }
 
+    // =============================================================
+    // GET PUBLISHED JOBS
+    // =============================================================
 
     /**
      * Get Published Jobs
@@ -325,6 +284,9 @@ public class JobController {
         );
     }
 
+    // =============================================================
+    // GET JOBS BY COMPANY
+    // =============================================================
 
     /**
      * Get Jobs by Company
@@ -351,6 +313,9 @@ public class JobController {
         );
     }
 
+    // =============================================================
+    // GET ALL JOBS
+    // =============================================================
 
     /**
      * Get All Jobs

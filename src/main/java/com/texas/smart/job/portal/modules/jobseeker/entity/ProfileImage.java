@@ -76,10 +76,4 @@ public class ProfileImage extends BaseEntity {
         return imagePath != null
                 && !imagePath.isEmpty();
     }
-
-    public String getImageFullUrl() {
-        return imagePath != null
-                ? "/api/files" + imagePath
-                : null;
-    }
 }

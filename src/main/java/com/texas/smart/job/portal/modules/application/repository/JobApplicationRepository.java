@@ -2,11 +2,17 @@ package com.texas.smart.job.portal.modules.application.repository;
 
 import com.texas.smart.job.portal.common.enums.ApplicationStatus;
 import com.texas.smart.job.portal.modules.application.entity.JobApplication;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -17,102 +23,133 @@ public interface JobApplicationRepository
     // JOB SEEKER
     // =============================================================
 
-    /**
-     * Check whether a JobSeeker has already applied for a Job.
-     */
     boolean existsByJobIdAndJobSeekerId(
             Long jobId,
             Long jobSeekerId
     );
 
-    /**
-     * Get all applications submitted by a JobSeeker.
-     */
     Page<JobApplication> findByJobSeekerId(
             Long jobSeekerId,
             Pageable pageable
     );
 
-    /**
-     * Get a specific application belonging to a JobSeeker.
-     */
     Optional<JobApplication> findByIdAndJobSeekerId(
             Long applicationId,
             Long jobSeekerId
     );
 
-
     // =============================================================
     // COMPANY
     // =============================================================
 
-    /**
-     * Get all applications received for jobs belonging to a Company.
-     */
     Page<JobApplication> findByJobCompanyId(
             Long companyId,
             Pageable pageable
     );
 
-    /**
-     * Get a specific application belonging to a Company's job.
-     */
     Optional<JobApplication> findByIdAndJobCompanyId(
             Long applicationId,
             Long companyId
     );
 
-    /**
-     * Get company applications filtered by status.
-     */
     Page<JobApplication> findByJobCompanyIdAndStatus(
             Long companyId,
             ApplicationStatus status,
             Pageable pageable
     );
 
-
     // =============================================================
-    // OPTIONAL COUNT METHODS
+    // COUNT METHODS
     // =============================================================
 
-    /**
-     * Count applications for a specific Job.
-     */
     long countByJobId(
             Long jobId
     );
 
-    /**
-     * Count applications for a specific Job by status.
-     */
     long countByJobIdAndStatus(
             Long jobId,
             ApplicationStatus status
     );
 
-
-    /**
-     * Count applications submitted by a JobSeeker.
-     */
     long countByJobSeekerId(
             Long jobSeekerId
     );
 
-
-    /**
-     * Count applications for a Company.
-     */
     long countByJobCompanyId(
             Long companyId
     );
 
-
-    /**
-     * Count company applications by status.
-     */
     long countByJobCompanyIdAndStatus(
             Long companyId,
             ApplicationStatus status
+    );
+
+    // =============================================================
+    // GLOBAL DASHBOARD STATISTICS
+    // =============================================================
+
+    @Query("""
+            SELECT COUNT(DISTINCT a.jobSeeker.id)
+            FROM JobApplication a
+            """)
+    long countDistinctJobSeekers();
+
+    // =============================================================
+    // COMPANY DASHBOARD / HIRING OVERVIEW
+    // =============================================================
+
+    long countByJobCompanyIdAndCreatedAtGreaterThanEqual(
+            Long companyId,
+            LocalDateTime startOfWeek
+    );
+
+    @Query("""
+            SELECT COUNT(DISTINCT a.jobSeeker.id)
+            FROM JobApplication a
+            WHERE
+                a.job.company.id = :companyId
+                AND a.status = :status
+            """)
+    long countDistinctJobSeekersByJobCompanyIdAndStatus(
+            @Param("companyId") Long companyId,
+            @Param("status") ApplicationStatus status
+    );
+
+    // =============================================================
+    // DELETE APPLICATIONS BY JOBS
+    // =============================================================
+
+    /**
+     * Delete all applications belonging to the supplied jobs.
+     *
+     * Required before deleting jobs because JobApplication.job_id
+     * references Job.id.
+     */
+    @Modifying
+    @Query("""
+            DELETE FROM JobApplication a
+            WHERE a.job.id IN :jobIds
+            """)
+    int deleteByJobIds(
+            @Param("jobIds") List<Long> jobIds
+    );
+
+    // =============================================================
+    // DELETE APPLICATIONS BY JOB SEEKER
+    // =============================================================
+
+    /**
+     * Delete all applications submitted by a JobSeeker.
+     *
+     * Required before deleting a JobSeeker because
+     * JobApplication.job_seeker_id references JobSeeker.id.
+     */
+    @Modifying
+    @Query("""
+            DELETE FROM JobApplication a
+            WHERE a.jobSeeker.id = :jobSeekerId
+            """)
+    int deleteByJobSeekerId(
+            @Param("jobSeekerId") Long jobSeekerId
     );
 }

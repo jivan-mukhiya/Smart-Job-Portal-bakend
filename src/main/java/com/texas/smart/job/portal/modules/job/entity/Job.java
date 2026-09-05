@@ -173,15 +173,6 @@ public class Job extends BaseEntity {
     @Builder.Default
     private List<JobBenefit> benefits = new ArrayList<>();
 
-    @OneToMany(
-            mappedBy = "job",
-            cascade = CascadeType.ALL,
-            fetch = FetchType.LAZY,
-            orphanRemoval = true
-    )
-    @Builder.Default
-    private List<JobAttachment> attachments = new ArrayList<>();
-
     // =============================================================
     // Skill Helpers
     // =============================================================
@@ -224,28 +215,6 @@ public class Job extends BaseEntity {
 
         benefits.remove(benefit);
         benefit.setJob(null);
-    }
-
-    // =============================================================
-    // Attachment Helpers
-    // =============================================================
-
-    public void addAttachment(JobAttachment attachment) {
-        if (attachment == null) {
-            return;
-        }
-
-        attachments.add(attachment);
-        attachment.setJob(this);
-    }
-
-    public void removeAttachment(JobAttachment attachment) {
-        if (attachment == null) {
-            return;
-        }
-
-        attachments.remove(attachment);
-        attachment.setJob(null);
     }
 
     // =============================================================

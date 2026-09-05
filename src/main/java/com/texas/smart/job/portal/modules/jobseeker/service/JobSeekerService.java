@@ -3,42 +3,105 @@ package com.texas.smart.job.portal.modules.jobseeker.service;
 import com.texas.smart.job.portal.modules.jobseeker.dto.request.JobSeekerRequest;
 import com.texas.smart.job.portal.modules.jobseeker.dto.request.JobSeekerUpdateRequest;
 import com.texas.smart.job.portal.modules.jobseeker.dto.response.JobSeekerResponse;
+import com.texas.smart.job.portal.modules.jobseeker.dto.response.ResumeResponse;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
 import org.springframework.web.multipart.MultipartFile;
 
 public interface JobSeekerService {
 
-    // Create
-    JobSeekerResponse createJobSeeker(JobSeekerRequest request);
+    // ============================================================
+    // CREATE
+    // ============================================================
 
-    // Current logged-in job seeker
+    JobSeekerResponse createJobSeeker(
+            JobSeekerRequest request
+    );
+
+
+    // ============================================================
+    // CURRENT LOGGED-IN JOB SEEKER
+    // ============================================================
+
     JobSeekerResponse getMyProfile();
 
-    // Get profile by ID
-    JobSeekerResponse getJobSeekerById(Long id);
+    /**
+     * Get resume of the currently authenticated job seeker.
+     *
+     * A job seeker can only access their own resume.
+     */
+    ResumeResponse getMyResume();
 
-    // Get all job seekers
-    Page<JobSeekerResponse> getAllJobSeekers(String search, Pageable pageable);
 
-    // Get only open-to-work job seekers
-    Page<JobSeekerResponse> getOpenToWorkJobSeekers(String search, Pageable pageable);
+    // ============================================================
+    // GET PROFILE BY ID
+    // ============================================================
 
-    // Update current user's profile
-    JobSeekerResponse updateMyProfile(JobSeekerUpdateRequest request);
+    JobSeekerResponse getJobSeekerById(
+            Long id
+    );
 
-    // Delete current user's profile
+
+    // ============================================================
+    // GET ALL JOB SEEKERS
+    // ============================================================
+
+    Page<JobSeekerResponse> getAllJobSeekers(
+            String search,
+            Pageable pageable
+    );
+
+
+    // ============================================================
+    // GET OPEN TO WORK JOB SEEKERS
+    // ============================================================
+
+    Page<JobSeekerResponse> getOpenToWorkJobSeekers(
+            String search,
+            Pageable pageable
+    );
+
+
+    // ============================================================
+    // UPDATE CURRENT USER PROFILE
+    // ============================================================
+
+    JobSeekerResponse updateMyProfile(
+            JobSeekerUpdateRequest request
+    );
+
+
+    // ============================================================
+    // DELETE CURRENT USER PROFILE
+    // ============================================================
+
     void deleteMyProfile();
 
-    // Profile image
-    JobSeekerResponse updateProfileImage(MultipartFile file);
+
+    // ============================================================
+    // PROFILE IMAGE
+    // ============================================================
+
+    JobSeekerResponse updateProfileImage(
+            MultipartFile file
+    );
 
     void removeProfileImage();
 
-    // Resume
-    JobSeekerResponse updateResume(MultipartFile file);
 
-    JobSeekerResponse updateResumeUrl(String resumeUrl);
+    // ============================================================
+    // RESUME
+    // ============================================================
+
+    JobSeekerResponse updateResume(
+            MultipartFile file
+    );
+
+    JobSeekerResponse updateResumeUrl(
+            String resumeUrl
+    );
 
     void removeResume();
 }

@@ -1,6 +1,7 @@
 package com.texas.smart.job.portal.modules.job.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -20,6 +21,9 @@ public class JobSkillRequest {
     @Builder.Default
     private Boolean required = true;
 
+    @PositiveOrZero(
+            message = "Display order must be zero or greater"
+    )
     @Builder.Default
     private Integer displayOrder = 0;
 }

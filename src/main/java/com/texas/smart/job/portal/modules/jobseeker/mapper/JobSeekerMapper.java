@@ -3,20 +3,43 @@ package com.texas.smart.job.portal.modules.jobseeker.mapper;
 import com.texas.smart.job.portal.common.enums.SocialPlatform;
 import com.texas.smart.job.portal.modules.jobseeker.dto.request.JobSeekerRequest;
 import com.texas.smart.job.portal.modules.jobseeker.dto.request.SocialProfileRequest;
-import com.texas.smart.job.portal.modules.jobseeker.dto.response.*;
-import com.texas.smart.job.portal.modules.jobseeker.entity.*;
+import com.texas.smart.job.portal.modules.jobseeker.dto.response.JobSeekerResponse;
+import com.texas.smart.job.portal.modules.jobseeker.dto.response.ProfileImageResponse;
+import com.texas.smart.job.portal.modules.jobseeker.dto.response.ResumeResponse;
+import com.texas.smart.job.portal.modules.jobseeker.dto.response.SkillResponse;
+import com.texas.smart.job.portal.modules.jobseeker.dto.response.SocialProfileResponse;
+import com.texas.smart.job.portal.modules.jobseeker.entity.JobSeeker;
+import com.texas.smart.job.portal.modules.jobseeker.entity.JobSeekerSkill;
+import com.texas.smart.job.portal.modules.jobseeker.entity.JobSeekerSocialProfile;
+import com.texas.smart.job.portal.modules.jobseeker.entity.ProfileImage;
+import com.texas.smart.job.portal.modules.jobseeker.entity.Resume;
+
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
+import java.util.Locale;
 
 @Mapper(componentModel = "spring")
-public interface JobSeekerMapper {
+public abstract class JobSeekerMapper {
 
-    // =============================================================
+    /*
+     * Example:
+     *
+     * app.file.base-url=http://localhost:9000/api/v1
+     *
+     * Final URL:
+     * http://localhost:9000/api/v1/files/uploads/jobseeker/profile/xxx.png
+     */
+    @Value("${app.file.base-url}")
+    protected String fileBaseUrl;
+
+
+    // ============================================================
     // REQUEST -> ENTITY
-    // =============================================================
+    // ============================================================
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
@@ -26,107 +49,208 @@ public interface JobSeekerMapper {
     @Mapping(target = "socialProfiles", ignore = true)
     @Mapping(target = "profileImage", ignore = true)
     @Mapping(target = "resume", ignore = true)
-    JobSeeker toEntity(JobSeekerRequest request);
+    public abstract JobSeeker toEntity(
+            JobSeekerRequest request
+    );
 
 
-    // =============================================================
+    // ============================================================
     // ENTITY -> RESPONSE
-    // =============================================================
-
-    @Mapping(source = "user.id", target = "userId")
-    @Mapping(source = "profileImage", target = "profileImage")
-    @Mapping(source = "resume", target = "resume")
-    @Mapping(source = "skills", target = "skills")
-    @Mapping(source = "socialProfiles", target = "socialProfiles")
-    JobSeekerResponse toResponse(JobSeeker jobSeeker);
-
-
-    // =============================================================
-    // PROFILE IMAGE
-    // =============================================================
+    // ============================================================
 
     @Mapping(
-            target = "imageUrl",
-            expression = "java(getImageUrl(profileImage.getImagePath()))"
+            source = "user.id",
+            target = "userId"
     )
-    ProfileImageResponse toProfileImageResponse(
+    @Mapping(
+            source = "profileImage",
+            target = "profileImage"
+    )
+    @Mapping(
+            source = "resume",
+            target = "resume"
+    )
+    @Mapping(
+            source = "skills",
+            target = "skills"
+    )
+    @Mapping(
+            source = "socialProfiles",
+            target = "socialProfiles"
+    )
+    public abstract JobSeekerResponse toResponse(
+            JobSeeker jobSeeker
+    );
+
+
+    // ============================================================
+    // PROFILE IMAGE ENTITY -> RESPONSE
+    // ============================================================
+
+    /*
+     * imagePath:
+     * /uploads/jobseeker/profile/jobseeker_5_profile_xxx.png
+     *
+     * imageUrl:
+     * http://localhost:9000/api/v1/files/uploads/jobseeker/profile/jobseeker_5_profile_xxx.png
+     */
+
+    @Mapping(
+            source = "imagePath",
+            target = "imagePath"
+    )
+    @Mapping(
+            source = "imagePath",
+            target = "imageUrl",
+            qualifiedByName = "fileUrl"
+    )
+    public abstract ProfileImageResponse toProfileImageResponse(
             ProfileImage profileImage
     );
 
 
-    // =============================================================
-    // RESUME
-    // =============================================================
+    // ============================================================
+    // RESUME ENTITY -> RESPONSE
+    // ============================================================
+
+    /*
+     * filePath:
+     * /uploads/jobseeker/resume/jobseeker_5_resume_xxx.pdf
+     *
+     * fileUrl:
+     * http://localhost:9000/api/v1/files/uploads/jobseeker/resume/jobseeker_5_resume_xxx.pdf
+     *
+     * resumeUrl:
+     * Used when the user provides an external resume URL.
+     */
 
     @Mapping(
-            target = "fileUrl",
-            expression = "java(getImageUrl(resume.getFilePath()))"
+            source = "resumeUrl",
+            target = "resumeUrl"
     )
-    ResumeResponse toResumeResponse(
+    @Mapping(
+            source = "filePath",
+            target = "filePath"
+    )
+    @Mapping(
+            source = "filePath",
+            target = "fileUrl",
+            qualifiedByName = "fileUrl"
+    )
+    public abstract ResumeResponse toResumeResponse(
             Resume resume
     );
 
 
-    // =============================================================
-    // SKILLS
-    // =============================================================
+    // ============================================================
+    // SKILL ENTITY -> RESPONSE
+    // ============================================================
 
-    SkillResponse toSkillResponse(
+    public abstract SkillResponse toSkillResponse(
             JobSeekerSkill skill
     );
 
-    List<SkillResponse> toSkillResponseList(
+
+    public abstract List<SkillResponse> toSkillResponseList(
             List<JobSeekerSkill> skills
     );
 
 
-    // =============================================================
-    // SOCIAL PROFILES
-    // =============================================================
+    // ============================================================
+    // SOCIAL PROFILE ENTITY -> RESPONSE
+    // ============================================================
+
+    /*
+     * Entity:
+     * SocialPlatform.LINKEDIN
+     *
+     * Response:
+     * "LINKEDIN"
+     */
 
     @Mapping(
             source = "platform",
             target = "platform",
             qualifiedByName = "platformToString"
     )
-    SocialProfileResponse toSocialProfileResponse(
+    @Mapping(
+            source = "url",
+            target = "url"
+    )
+    public abstract SocialProfileResponse toSocialProfileResponse(
             JobSeekerSocialProfile profile
     );
 
-    List<SocialProfileResponse> toSocialProfileResponseList(
+
+    public abstract List<SocialProfileResponse>
+    toSocialProfileResponseList(
             List<JobSeekerSocialProfile> profiles
     );
 
 
-    // =============================================================
+    // ============================================================
     // SOCIAL PROFILE REQUEST -> ENTITY
-    // =============================================================
+    // ============================================================
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "jobSeeker", ignore = true)
+    /*
+     * Request:
+     *
+     * {
+     *     "platform": "linkedin",
+     *     "url": "https://www.linkedin.com/in/example"
+     * }
+     *
+     * Entity:
+     *
+     * platform = SocialPlatform.LINKEDIN
+     */
+
+    @Mapping(
+            target = "id",
+            ignore = true
+    )
+    @Mapping(
+            target = "createdAt",
+            ignore = true
+    )
+    @Mapping(
+            target = "updatedAt",
+            ignore = true
+    )
+    @Mapping(
+            target = "jobSeeker",
+            ignore = true
+    )
     @Mapping(
             target = "platform",
             source = "platform",
             qualifiedByName = "stringToPlatform"
     )
-    @Mapping(target = "active", constant = "true")
-    JobSeekerSocialProfile toSocialProfileEntity(
+    @Mapping(
+            target = "url",
+            source = "url"
+    )
+    @Mapping(
+            target = "active",
+            constant = "true"
+    )
+    public abstract JobSeekerSocialProfile toSocialProfileEntity(
             SocialProfileRequest request
     );
 
-    List<JobSeekerSocialProfile> toSocialProfileEntityList(
+
+    public abstract List<JobSeekerSocialProfile>
+    toSocialProfileEntityList(
             List<SocialProfileRequest> requests
     );
 
 
-    // =============================================================
-    // SOCIAL PLATFORM CONVERSION
-    // =============================================================
+    // ============================================================
+    // SOCIAL PLATFORM ENUM -> STRING
+    // ============================================================
 
     @Named("platformToString")
-    default String platformToString(
+    protected String platformToString(
             SocialPlatform platform
     ) {
 
@@ -138,8 +262,12 @@ public interface JobSeekerMapper {
     }
 
 
+    // ============================================================
+    // STRING -> SOCIAL PLATFORM ENUM
+    // ============================================================
+
     @Named("stringToPlatform")
-    default SocialPlatform stringToPlatform(
+    protected SocialPlatform stringToPlatform(
             String platform
     ) {
 
@@ -148,25 +276,172 @@ public interface JobSeekerMapper {
         }
 
         try {
+
             return SocialPlatform.valueOf(
-                    platform.trim().toUpperCase()
+                    platform
+                            .trim()
+                            .toUpperCase(Locale.ROOT)
             );
+
         } catch (IllegalArgumentException e) {
+
             return SocialPlatform.OTHER;
         }
     }
 
 
-    // =============================================================
-    // FILE URL
-    // =============================================================
+    // ============================================================
+    // STORAGE PATH -> PUBLIC FILE URL
+    // ============================================================
 
-    default String getImageUrl(String path) {
+    /**
+     * Converts a stored file path into a public HTTP URL.
+     *
+     * Stored path examples:
+     *
+     * /uploads/jobseeker/profile/example.png
+     *
+     * /uploads/jobseeker/resume/example.pdf
+     *
+     * Final URL:
+     *
+     * http://localhost:9000/api/v1/files/uploads/jobseeker/profile/example.png
+     */
 
+    @Named("fileUrl")
+    protected String getFileUrl(
+            String path
+    ) {
+
+        // No path
         if (path == null || path.isBlank()) {
             return null;
         }
 
-        return "/api/files" + path;
+        // Normalize Windows paths
+        String normalizedPath = path
+                .trim()
+                .replace("\\", "/");
+
+
+        // --------------------------------------------------------
+        // Already a complete URL
+        // --------------------------------------------------------
+
+        if (normalizedPath.startsWith("http://")
+                || normalizedPath.startsWith("https://")) {
+
+            return normalizedPath;
+        }
+
+
+        // --------------------------------------------------------
+        // Remove existing API prefixes
+        // --------------------------------------------------------
+
+        /*
+         * Example:
+         *
+         * /api/files/uploads/...
+         *
+         * becomes:
+         *
+         * /uploads/...
+         */
+
+        if (normalizedPath.startsWith("/api/files/")) {
+
+            normalizedPath = normalizedPath.substring(
+                    "/api/files".length()
+            );
+        }
+
+
+        /*
+         * Example:
+         *
+         * /api/v1/files/uploads/...
+         *
+         * becomes:
+         *
+         * /uploads/...
+         */
+
+        if (normalizedPath.startsWith("/api/v1/files/")) {
+
+            normalizedPath = normalizedPath.substring(
+                    "/api/v1/files".length()
+            );
+        }
+
+
+        // --------------------------------------------------------
+        // Make sure path starts with /
+        // --------------------------------------------------------
+
+        if (!normalizedPath.startsWith("/")) {
+
+            normalizedPath = "/" + normalizedPath;
+        }
+
+
+        // --------------------------------------------------------
+        // Build final URL
+        // --------------------------------------------------------
+
+        /*
+         * If path already contains /files/
+         *
+         * /files/uploads/...
+         *
+         * simply append it to base URL.
+         */
+
+        if (normalizedPath.startsWith("/files/")) {
+
+            return removeTrailingSlash(fileBaseUrl)
+                    + normalizedPath;
+        }
+
+
+        /*
+         * Normal case:
+         *
+         * /uploads/...
+         *
+         * becomes:
+         *
+         * {base-url}/files/uploads/...
+         */
+
+        return removeTrailingSlash(fileBaseUrl)
+                + "/files"
+                + normalizedPath;
+    }
+
+
+    // ============================================================
+    // REMOVE TRAILING SLASH
+    // ============================================================
+
+    private String removeTrailingSlash(
+            String value
+    ) {
+
+        if (value == null) {
+            return "";
+        }
+
+        String result = value.trim();
+
+        while (result.endsWith("/")) {
+
+            result = result.substring(
+                    0,
+                    result.length() - 1
+            );
+        }
+
+        return result;
     }
 }
