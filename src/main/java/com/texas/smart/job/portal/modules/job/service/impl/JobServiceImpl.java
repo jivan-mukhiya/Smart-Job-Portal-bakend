@@ -41,7 +41,6 @@ public class JobServiceImpl implements JobService {
     private final CompanyRepository companyRepository;
     private final JobMapper jobMapper;
 
-    // NEW REPOSITORIES
     private final JobSkillRepository jobSkillRepository;
     private final JobBenefitRepository jobBenefitRepository;
 
@@ -54,6 +53,10 @@ public class JobServiceImpl implements JobService {
     public JobResponse createJob(JobRequest request) {
 
         Company company = getCurrentUserCompany();
+
+        // IMPORTANT:
+        // Company must be approved before creating a job
+        validateCompanyApproval(company);
 
         validateSalary(
                 request.getSalaryMin(),
@@ -234,7 +237,12 @@ public class JobServiceImpl implements JobService {
 
         Job job = findJobById(jobId);
 
+        // Check that the current company owns this job
         validateJobOwnership(job);
+
+        // IMPORTANT:
+        // Company must still be approved before updating the job
+        validateCompanyApproval(job.getCompany());
 
         validateSalary(
                 request.getSalaryMin(),
@@ -401,6 +409,10 @@ public class JobServiceImpl implements JobService {
 
         validateJobOwnership(job);
 
+        // IMPORTANT:
+        // Company must be approved before publishing
+        validateCompanyApproval(job.getCompany());
+
         if (job.isExpired()) {
 
             throw new BusinessException(
@@ -448,6 +460,7 @@ public class JobServiceImpl implements JobService {
         validateJobOwnership(job);
 
         if (job.getStatus() == JobStatus.CLOSED) {
+
             throw new BusinessException(
                     ErrorCode.JOB_ALREADY_CLOSED
             );
@@ -462,6 +475,7 @@ public class JobServiceImpl implements JobService {
         return jobMapper.toResponse(savedJob);
     }
 
+
     // =============================================================
     // UPDATE JOB STATUS
     // =============================================================
@@ -475,6 +489,10 @@ public class JobServiceImpl implements JobService {
         Job job = findJobById(jobId);
 
         validateJobOwnership(job);
+
+        // IMPORTANT:
+        // Company must be approved before changing job status
+        validateCompanyApproval(job.getCompany());
 
         JobStatus jobStatus;
 
@@ -545,6 +563,28 @@ public class JobServiceImpl implements JobService {
                 !job.getCompany()
                         .getId()
                         .equals(currentCompany.getId())) {
+
+            throw new BusinessException(
+                    ErrorCode.ACCESS_DENIED
+            );
+        }
+    }
+
+
+    // =============================================================
+    // COMPANY APPROVAL
+    // =============================================================
+
+    private void validateCompanyApproval(Company company) {
+
+        if (company == null) {
+
+            throw new BusinessException(
+                    ErrorCode.COMPANY_NOT_FOUND
+            );
+        }
+
+        if (!company.getApproved()) {
 
             throw new BusinessException(
                     ErrorCode.ACCESS_DENIED
@@ -744,10 +784,6 @@ public class JobServiceImpl implements JobService {
 
         // ---------------------------------------------------------
         // STEP 2: FORCE DELETE TO DATABASE
-        //
-        // This is the important part that fixes:
-        //
-        // Duplicate entry '4-next js'
         // ---------------------------------------------------------
 
         jobSkillRepository.flush();
@@ -786,12 +822,10 @@ public class JobServiceImpl implements JobService {
                 continue;
             }
 
-
             String skillName =
                     skillRequest
                             .getSkillName()
                             .trim();
-
 
             /*
              * Normalize only for duplicate checking.
@@ -916,7 +950,6 @@ public class JobServiceImpl implements JobService {
 
                 continue;
             }
-
 
             JobBenefit benefit =
                     JobBenefit.builder()
