@@ -48,15 +48,9 @@ public interface JobRepository
     // DASHBOARD COUNTS
     // ============================================================
 
-    /**
-     * Total jobs across the entire platform.
-     */
     @Override
     long count();
 
-    /**
-     * Count active jobs across the platform.
-     */
     long countByStatusAndActiveTrue(
             JobStatus status
     );
@@ -75,19 +69,29 @@ public interface JobRepository
     // ============================================================
 
     @Query("""
-            SELECT j
+            SELECT DISTINCT j
             FROM Job j
+            LEFT JOIN j.requiredSkills skill
             WHERE
-                LOWER(j.title)
+                LOWER(COALESCE(j.title, ''))
                     LIKE LOWER(CONCAT('%', :search, '%'))
                 OR
-                LOWER(j.description)
+                LOWER(COALESCE(j.description, ''))
                     LIKE LOWER(CONCAT('%', :search, '%'))
                 OR
-                LOWER(j.location)
+                LOWER(COALESCE(j.responsibilities, ''))
                     LIKE LOWER(CONCAT('%', :search, '%'))
                 OR
-                LOWER(j.company.companyName)
+                LOWER(COALESCE(j.requirements, ''))
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+                OR
+                LOWER(COALESCE(j.location, ''))
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+                OR
+                LOWER(COALESCE(j.company.companyName, ''))
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+                OR
+                LOWER(COALESCE(skill.skillName, ''))
                     LIKE LOWER(CONCAT('%', :search, '%'))
             """)
     Page<Job> searchJobs(
@@ -100,19 +104,29 @@ public interface JobRepository
     // ============================================================
 
     @Query("""
-            SELECT j
+            SELECT DISTINCT j
             FROM Job j
+            LEFT JOIN j.requiredSkills skill
             WHERE
                 j.company.id = :companyId
                 AND
                 (
-                    LOWER(j.title)
+                    LOWER(COALESCE(j.title, ''))
                         LIKE LOWER(CONCAT('%', :search, '%'))
                     OR
-                    LOWER(j.description)
+                    LOWER(COALESCE(j.description, ''))
                         LIKE LOWER(CONCAT('%', :search, '%'))
                     OR
-                    LOWER(j.location)
+                    LOWER(COALESCE(j.responsibilities, ''))
+                        LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR
+                    LOWER(COALESCE(j.requirements, ''))
+                        LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR
+                    LOWER(COALESCE(j.location, ''))
+                        LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR
+                    LOWER(COALESCE(skill.skillName, ''))
                         LIKE LOWER(CONCAT('%', :search, '%'))
                 )
             """)
@@ -126,30 +140,107 @@ public interface JobRepository
     // SEARCH PUBLISHED JOBS
     // ============================================================
 
-    @Query("""
-            SELECT j
-            FROM Job j
-            WHERE
-                j.status =
-                    com.texas.smart.job.portal.common.enums.JobStatus.ACTIVE
-                AND j.active = true
-                AND
-                (
-                    LOWER(j.title)
-                        LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR
-                    LOWER(j.description)
-                        LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR
-                    LOWER(j.location)
-                        LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR
-                    LOWER(j.company.companyName)
-                        LIKE LOWER(CONCAT('%', :search, '%'))
-                )
-            """)
+    @Query(
+            value = """
+                    SELECT DISTINCT j
+                    FROM Job j
+                    LEFT JOIN j.requiredSkills skill
+                    WHERE
+                        j.status =
+                            com.texas.smart.job.portal.common.enums.JobStatus.ACTIVE
+                        AND j.active = true
+
+                        AND
+                        (
+                            :search IS NULL
+                            OR :search = ''
+                            OR
+                            LOWER(COALESCE(j.title, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                            OR
+                            LOWER(COALESCE(j.description, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                            OR
+                            LOWER(COALESCE(j.responsibilities, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                            OR
+                            LOWER(COALESCE(j.requirements, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                            OR
+                            LOWER(COALESCE(j.location, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                            OR
+                            LOWER(COALESCE(j.company.companyName, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                            OR
+                            LOWER(COALESCE(skill.skillName, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                        )
+
+                        AND
+                        (
+                            :location IS NULL
+                            OR :location = ''
+                            OR
+                            LOWER(COALESCE(j.location, ''))
+                                LIKE LOWER(CONCAT('%', :location, '%'))
+                            OR
+                            LOWER(COALESCE(j.address, ''))
+                                LIKE LOWER(CONCAT('%', :location, '%'))
+                        )
+                    """,
+            countQuery = """
+                    SELECT COUNT(DISTINCT j.id)
+                    FROM Job j
+                    LEFT JOIN j.requiredSkills skill
+                    WHERE
+                        j.status =
+                            com.texas.smart.job.portal.common.enums.JobStatus.ACTIVE
+                        AND j.active = true
+
+                        AND
+                        (
+                            :search IS NULL
+                            OR :search = ''
+                            OR
+                            LOWER(COALESCE(j.title, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                            OR
+                            LOWER(COALESCE(j.description, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                            OR
+                            LOWER(COALESCE(j.responsibilities, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                            OR
+                            LOWER(COALESCE(j.requirements, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                            OR
+                            LOWER(COALESCE(j.location, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                            OR
+                            LOWER(COALESCE(j.company.companyName, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                            OR
+                            LOWER(COALESCE(skill.skillName, ''))
+                                LIKE LOWER(CONCAT('%', :search, '%'))
+                        )
+
+                        AND
+                        (
+                            :location IS NULL
+                            OR :location = ''
+                            OR
+                            LOWER(COALESCE(j.location, ''))
+                                LIKE LOWER(CONCAT('%', :location, '%'))
+                            OR
+                            LOWER(COALESCE(j.address, ''))
+                                LIKE LOWER(CONCAT('%', :location, '%'))
+                        )
+                    """
+    )
     Page<Job> searchPublishedJobs(
             @Param("search") String search,
+            @Param("location") String location,
             Pageable pageable
     );
 

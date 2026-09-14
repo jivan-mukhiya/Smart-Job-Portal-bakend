@@ -181,11 +181,6 @@ public class SecurityConfig {
                         // /api/v1/admin/dashboard/statistics
                         //
                         // ADMIN role only.
-                        //
-                        // JOB_SEEKER  -> 403
-                        // COMPANY     -> 403
-                        // ADMIN       -> allowed
-                        // No JWT      -> 401
                         // =========================================
 
                         .requestMatchers(
@@ -196,16 +191,6 @@ public class SecurityConfig {
 
                         // =========================================
                         // PROTECTED COMPANY HIRING OVERVIEW
-                        // =========================================
-                        //
-                        // GET
-                        // /api/v1/dashboard/company/hiring-overview
-                        //
-                        // JWT required.
-                        //
-                        // The endpoint does NOT accept companyId.
-                        // The authenticated user's company is
-                        // resolved inside the service.
                         // =========================================
 
                         .requestMatchers(
@@ -245,7 +230,28 @@ public class SecurityConfig {
 
 
                         // =========================================
+                        // PUBLIC COMPANY LOGO
+                        // =========================================
+                        //
+                        // GET
+                        // /api/v1/companies/{companyId}/logo
+                        //
+                        // No JWT required.
+                        // =========================================
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/companies/*/logo"
+                        ).permitAll()
+
+
+                        // =========================================
                         // PUBLIC SINGLE COMPANY
+                        // =========================================
+                        //
+                        // GET /api/v1/companies/{companyId}
+                        //
+                        // No JWT required.
                         // =========================================
 
                         .requestMatchers(
@@ -288,7 +294,8 @@ public class SecurityConfig {
                         // PROTECTED COMPANY APIs
                         // =========================================
                         //
-                        // JWT required.
+                        // Everything else under /companies/**
+                        // requires authentication.
                         // =========================================
 
                         .requestMatchers(

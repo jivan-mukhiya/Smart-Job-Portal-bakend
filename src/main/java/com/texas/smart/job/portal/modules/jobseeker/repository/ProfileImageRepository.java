@@ -9,7 +9,7 @@ public interface ProfileImageRepository
         extends JpaRepository<ProfileImage, Long> {
 
     // =============================================================
-    // FIND BY JOB SEEKER
+    // FIND BY JOB SEEKER ID
     // =============================================================
 
     Optional<ProfileImage> findByJobSeekerId(
@@ -18,7 +18,16 @@ public interface ProfileImageRepository
 
 
     // =============================================================
-    // CHECK EXISTS
+    // FIND BY USER ID
+    // =============================================================
+
+    Optional<ProfileImage> findByJobSeekerUserId(
+            Long userId
+    );
+
+
+    // =============================================================
+    // CHECK EXISTS BY JOB SEEKER ID
     // =============================================================
 
     boolean existsByJobSeekerId(
@@ -27,7 +36,7 @@ public interface ProfileImageRepository
 
 
     // =============================================================
-    // DELETE
+    // DELETE BY JOB SEEKER ID
     // =============================================================
 
     void deleteByJobSeekerId(

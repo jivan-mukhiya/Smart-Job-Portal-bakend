@@ -25,10 +25,23 @@ public interface JobSeekerService {
     // CURRENT LOGGED-IN JOB SEEKER
     // ============================================================
 
+    /**
+     * Get the profile of the currently authenticated job seeker.
+     */
     JobSeekerResponse getMyProfile();
 
+
     /**
-     * Get resume of the currently authenticated job seeker.
+     * Get the profile image URL of the currently authenticated
+     * job seeker.
+     *
+     * A job seeker can only access their own profile image.
+     */
+    String getMyProfileImage();
+
+
+    /**
+     * Get the resume of the currently authenticated job seeker.
      *
      * A job seeker can only access their own resume.
      */
@@ -39,6 +52,9 @@ public interface JobSeekerService {
     // GET PROFILE BY ID
     // ============================================================
 
+    /**
+     * Get a job seeker profile by ID.
+     */
     JobSeekerResponse getJobSeekerById(
             Long id
     );
@@ -48,6 +64,9 @@ public interface JobSeekerService {
     // GET ALL JOB SEEKERS
     // ============================================================
 
+    /**
+     * Get all job seekers with optional search and pagination.
+     */
     Page<JobSeekerResponse> getAllJobSeekers(
             String search,
             Pageable pageable
@@ -58,6 +77,9 @@ public interface JobSeekerService {
     // GET OPEN TO WORK JOB SEEKERS
     // ============================================================
 
+    /**
+     * Get job seekers who are currently open to work.
+     */
     Page<JobSeekerResponse> getOpenToWorkJobSeekers(
             String search,
             Pageable pageable
@@ -68,6 +90,9 @@ public interface JobSeekerService {
     // UPDATE CURRENT USER PROFILE
     // ============================================================
 
+    /**
+     * Update the profile of the currently authenticated job seeker.
+     */
     JobSeekerResponse updateMyProfile(
             JobSeekerUpdateRequest request
     );
@@ -77,6 +102,9 @@ public interface JobSeekerService {
     // DELETE CURRENT USER PROFILE
     // ============================================================
 
+    /**
+     * Delete the profile of the currently authenticated job seeker.
+     */
     void deleteMyProfile();
 
 
@@ -84,10 +112,17 @@ public interface JobSeekerService {
     // PROFILE IMAGE
     // ============================================================
 
+    /**
+     * Upload or update the profile image.
+     */
     JobSeekerResponse updateProfileImage(
             MultipartFile file
     );
 
+
+    /**
+     * Remove the current profile image.
+     */
     void removeProfileImage();
 
 
@@ -95,13 +130,24 @@ public interface JobSeekerService {
     // RESUME
     // ============================================================
 
+    /**
+     * Upload or update the resume.
+     */
     JobSeekerResponse updateResume(
             MultipartFile file
     );
 
+
+    /**
+     * Update resume using an existing URL.
+     */
     JobSeekerResponse updateResumeUrl(
             String resumeUrl
     );
 
+
+    /**
+     * Remove the current resume.
+     */
     void removeResume();
 }

@@ -40,6 +40,8 @@ import com.texas.smart.job.portal.modules.job.repository.JobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -80,6 +82,27 @@ public class CompanyServiceImpl
     private final FileStorageService fileStorageService;
 
     private final CompanyMapper companyMapper;
+
+
+    // ============================================================
+    // FILE PUBLIC BASE URL
+    // ============================================================
+
+    /*
+     * application.properties:
+     *
+     * app.file.base-url=http://localhost:9000/api/v1
+     *
+     * Stored database path:
+     *
+     * /uploads/company/logo/company_4_logo_xxx.jpg
+     *
+     * Final public URL:
+     *
+     * http://localhost:9000/api/v1/files/uploads/company/logo/company_4_logo_xxx.jpg
+     */
+    @Value("${app.file.base-url}")
+    private String fileBaseUrl;
 
 
     // ============================================================
@@ -1462,6 +1485,81 @@ public class CompanyServiceImpl
         return companyRepository.existsByCompanyName(
                 companyName
         );
+    }
+
+
+    // ============================================================
+    // GET COMPANY LOGO
+    // ============================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getCompanyLogo(
+            Long companyId
+    ) {
+
+        Company company =
+                companyRepository
+                        .findById(companyId)
+                        .orElseThrow(() ->
+                                new BusinessException(
+                                        ErrorCode.COMPANY_NOT_FOUND
+                                )
+                        );
+
+
+        // ========================================================
+        // NO IMAGE RECORD
+        // ========================================================
+
+        if (company.getImages() == null) {
+
+            return null;
+        }
+
+
+        // ========================================================
+        // GET STORED LOGO PATH
+        // ========================================================
+
+        String logoPath =
+                company.getImages()
+                        .getLogoPath();
+
+
+        // ========================================================
+        // NO LOGO
+        // ========================================================
+
+        if (!StringUtils.hasText(
+                logoPath
+        )) {
+
+            return null;
+        }
+
+
+        // ========================================================
+        // RETURN FULL PUBLIC URL
+        // ========================================================
+        //
+        // application.properties:
+        //
+        // app.file.base-url=http://localhost:9000/api/v1
+        //
+        // logoPath:
+        //
+        // /uploads/company/logo/company_4_logo_xxx.jpg
+        //
+        // Result:
+        //
+        // http://localhost:9000/api/v1/files/uploads/company/logo/company_4_logo_xxx.jpg
+        //
+        // ========================================================
+
+        return fileBaseUrl
+                + "/files"
+                + logoPath;
     }
 
 

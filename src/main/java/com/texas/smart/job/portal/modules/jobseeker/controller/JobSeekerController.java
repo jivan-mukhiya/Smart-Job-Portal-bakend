@@ -23,7 +23,16 @@ import org.springframework.http.ResponseEntity;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import org.springframework.web.multipart.MultipartFile;
 
 
@@ -31,7 +40,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/job-seekers")
 @RequiredArgsConstructor
 public class JobSeekerController {
-
 
     private final JobSeekerService jobSeekerService;
 
@@ -42,6 +50,8 @@ public class JobSeekerController {
 
     /**
      * JOB_SEEKER creates their own profile.
+     *
+     * POST /api/v1/job-seekers
      */
     @PostMapping
     @PreAuthorize("hasRole('JOB_SEEKER')")
@@ -68,6 +78,8 @@ public class JobSeekerController {
 
     /**
      * Get currently authenticated job seeker's profile.
+     *
+     * GET /api/v1/job-seekers/me
      */
     @GetMapping("/me")
     @PreAuthorize("hasRole('JOB_SEEKER')")
@@ -88,6 +100,8 @@ public class JobSeekerController {
 
     /**
      * Update currently authenticated job seeker's profile.
+     *
+     * PUT /api/v1/job-seekers/me
      */
     @PutMapping("/me")
     @PreAuthorize("hasRole('JOB_SEEKER')")
@@ -112,6 +126,8 @@ public class JobSeekerController {
 
     /**
      * Delete currently authenticated job seeker's profile.
+     *
+     * DELETE /api/v1/job-seekers/me
      */
     @DeleteMapping("/me")
     @PreAuthorize("hasRole('JOB_SEEKER')")
@@ -135,16 +151,6 @@ public class JobSeekerController {
     /**
      * Get the resume belonging to the currently authenticated
      * job seeker.
-     *
-     * Security:
-     *
-     * 1. Endpoint requires JOB_SEEKER role.
-     * 2. No jobSeekerId is accepted from the client.
-     * 3. Service obtains the current authenticated user.
-     * 4. Service finds the JobSeeker belonging to that user.
-     * 5. Service returns only that JobSeeker's resume.
-     *
-     * Endpoint:
      *
      * GET /api/v1/job-seekers/me/resume
      */
@@ -170,7 +176,32 @@ public class JobSeekerController {
     // ============================================================
 
     /**
+     * Get the profile image URL of the currently authenticated
+     * job seeker.
+     *
+     * GET /api/v1/job-seekers/me/profile-image
+     */
+    @GetMapping("/me/profile-image")
+    @PreAuthorize("hasRole('JOB_SEEKER')")
+    public ResponseEntity<ApiResponse<String>>
+    getMyProfileImage() {
+
+        String imageUrl =
+                jobSeekerService.getMyProfileImage();
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Job seeker profile image retrieved successfully",
+                        imageUrl
+                )
+        );
+    }
+
+
+    /**
      * Upload or replace profile image.
+     *
+     * PUT /api/v1/job-seekers/me/profile-image
      */
     @PutMapping("/me/profile-image")
     @PreAuthorize("hasRole('JOB_SEEKER')")
@@ -195,6 +226,8 @@ public class JobSeekerController {
 
     /**
      * Remove profile image.
+     *
+     * DELETE /api/v1/job-seekers/me/profile-image
      */
     @DeleteMapping("/me/profile-image")
     @PreAuthorize("hasRole('JOB_SEEKER')")
@@ -217,6 +250,8 @@ public class JobSeekerController {
 
     /**
      * Upload or replace resume.
+     *
+     * PUT /api/v1/job-seekers/me/resume
      */
     @PutMapping("/me/resume")
     @PreAuthorize("hasRole('JOB_SEEKER')")
@@ -241,6 +276,8 @@ public class JobSeekerController {
 
     /**
      * Set external resume URL.
+     *
+     * PUT /api/v1/job-seekers/me/resume-url
      */
     @PutMapping("/me/resume-url")
     @PreAuthorize("hasRole('JOB_SEEKER')")
@@ -265,6 +302,8 @@ public class JobSeekerController {
 
     /**
      * Remove resume.
+     *
+     * DELETE /api/v1/job-seekers/me/resume
      */
     @DeleteMapping("/me/resume")
     @PreAuthorize("hasRole('JOB_SEEKER')")
@@ -287,6 +326,8 @@ public class JobSeekerController {
 
     /**
      * Get job seeker by ID.
+     *
+     * GET /api/v1/job-seekers/{jobSeekerId}
      *
      * NOTE:
      * This endpoint does not expose the job seeker's resume.
@@ -313,6 +354,8 @@ public class JobSeekerController {
 
     /**
      * Get job seekers who are open to work.
+     *
+     * GET /api/v1/job-seekers/open-to-work
      */
     @GetMapping("/open-to-work")
     public ResponseEntity<
@@ -347,6 +390,8 @@ public class JobSeekerController {
 
     /**
      * ADMIN gets all job seekers.
+     *
+     * GET /api/v1/job-seekers
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")

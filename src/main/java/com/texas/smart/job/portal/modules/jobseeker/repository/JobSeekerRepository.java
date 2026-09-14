@@ -15,6 +15,7 @@ public interface JobSeekerRepository
     // =============================================================
     // FIND BY USER
     // =============================================================
+
     Optional<JobSeeker> findByUser_Email(String email);
 
     Optional<JobSeeker> findByUserId(Long userId);
@@ -22,6 +23,7 @@ public interface JobSeekerRepository
     Optional<JobSeeker> findByUserEmail(String email);
 
     boolean existsByUserId(Long userId);
+
     boolean existsByEmailAndIdNot(String email, Long id);
 
 
@@ -39,10 +41,14 @@ public interface JobSeekerRepository
     @Query("""
             SELECT js
             FROM JobSeeker js
-            WHERE LOWER(js.fullName) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(js.email) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(js.professionalTitle) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(js.highestEducation) LIKE LOWER(CONCAT('%', :search, '%'))
+            WHERE LOWER(js.fullName)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+               OR LOWER(js.email)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+               OR LOWER(js.professionalTitle)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
+               OR LOWER(js.highestEducation)
+                    LIKE LOWER(CONCAT('%', :search, '%'))
             """)
     Page<JobSeeker> searchJobSeekers(
             @Param("search") String search,
@@ -64,9 +70,12 @@ public interface JobSeekerRepository
             FROM JobSeeker js
             WHERE js.openToWork = true
               AND (
-                    LOWER(js.fullName) LIKE LOWER(CONCAT('%', :search, '%'))
-                 OR LOWER(js.professionalTitle) LIKE LOWER(CONCAT('%', :search, '%'))
-                 OR LOWER(js.highestEducation) LIKE LOWER(CONCAT('%', :search, '%'))
+                    LOWER(js.fullName)
+                        LIKE LOWER(CONCAT('%', :search, '%'))
+                 OR LOWER(js.professionalTitle)
+                        LIKE LOWER(CONCAT('%', :search, '%'))
+                 OR LOWER(js.highestEducation)
+                        LIKE LOWER(CONCAT('%', :search, '%'))
               )
             """)
     Page<JobSeeker> searchOpenToWorkJobSeekers(
@@ -77,6 +86,19 @@ public interface JobSeekerRepository
 
     // =============================================================
     // FETCH COMPLETE PROFILE
+    // =============================================================
+    //
+    // IMPORTANT:
+    //
+    // Do NOT use this query for recommendation.
+    //
+    // Both skills and socialProfiles are List collections.
+    // Fetching both bags together causes:
+    //
+    // MultipleBagFetchException
+    //
+    // Keep this method only if another part of the application
+    // actually needs the complete profile.
     // =============================================================
 
     @Query("""
@@ -93,6 +115,17 @@ public interface JobSeekerRepository
             @Param("id") Long id
     );
 
+
+    // =============================================================
+    // COMPLETE PROFILE BY EMAIL
+    // =============================================================
+    //
+    // Same warning:
+    // this method fetches two List collections.
+    //
+    // Do not use this method from RecommendationServiceImpl.
+    // =============================================================
+
     @Query("""
             SELECT DISTINCT js
             FROM JobSeeker js
@@ -104,6 +137,36 @@ public interface JobSeekerRepository
             WHERE LOWER(js.user.email) = LOWER(:email)
             """)
     Optional<JobSeeker> findByUserEmailWithAllDetails(
+            @Param("email") String email
+    );
+
+
+    // =============================================================
+    // RECOMMENDATION PROFILE
+    // =============================================================
+    //
+    // This query is specifically for the recommendation engine.
+    //
+    // Fetch:
+    //   - User
+    //   - Resume
+    //   - Skills
+    //
+    // Do NOT fetch socialProfiles.
+    //
+    // skills is the only List collection being fetched, so Hibernate
+    // does not have the multiple-bag problem.
+    // =============================================================
+
+    @Query("""
+            SELECT DISTINCT js
+            FROM JobSeeker js
+            LEFT JOIN FETCH js.user
+            LEFT JOIN FETCH js.resume
+            LEFT JOIN FETCH js.skills
+            WHERE LOWER(js.user.email) = LOWER(:email)
+            """)
+    Optional<JobSeeker> findByUserEmailForRecommendation(
             @Param("email") String email
     );
 }

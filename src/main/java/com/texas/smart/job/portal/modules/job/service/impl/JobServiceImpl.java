@@ -352,30 +352,31 @@ public class JobServiceImpl implements JobService {
     @Transactional(readOnly = true)
     public PageResponse<JobResponse> getPublishedJobs(
             String search,
+            String location,
             Pageable pageable
     ) {
 
-        Page<Job> page;
+        String normalizedSearch =
+                search != null &&
+                        !search.trim().isEmpty()
+                        ? search.trim()
+                        : null;
 
-        if (search != null &&
-                !search.trim().isEmpty()) {
+        String normalizedLocation =
+                location != null &&
+                        !location.trim().isEmpty()
+                        ? location.trim()
+                        : null;
 
-            page = jobRepository.searchPublishedJobs(
-                    search.trim(),
-                    pageable
-            );
-
-        } else {
-
-            page = jobRepository.findByStatusAndActiveTrue(
-                    JobStatus.ACTIVE,
-                    pageable
-            );
-        }
+        Page<Job> page =
+                jobRepository.searchPublishedJobs(
+                        normalizedSearch,
+                        normalizedLocation,
+                        pageable
+                );
 
         return buildPageResponse(page);
     }
-
 
     // =============================================================
     // GET JOBS BY COMPANY

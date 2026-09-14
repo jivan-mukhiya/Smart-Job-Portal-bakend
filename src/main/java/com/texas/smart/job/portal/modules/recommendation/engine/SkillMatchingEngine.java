@@ -9,13 +9,28 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+
 @Component
 public class SkillMatchingEngine {
+
+
+    // =============================================================
+    // CALCULATE SKILL SCORE
+    // =============================================================
 
     public double calculateSkillScore(
             Set<String> candidateSkills,
             Job job
     ) {
+
+        List<JobSkill> requiredSkills =
+                getRequiredSkills(job);
+
+
+        if (requiredSkills.isEmpty()) {
+            return 0.0;
+        }
+
 
         List<String> matchedSkills =
                 getMatchedSkills(
@@ -23,20 +38,17 @@ public class SkillMatchingEngine {
                         job
                 );
 
-        long requiredSkillCount =
-                getRequiredSkills(job)
-                        .size();
-
-        if (requiredSkillCount == 0) {
-
-            return 0.0;
-        }
 
         return (
                 (double) matchedSkills.size()
-                        / requiredSkillCount
+                        / requiredSkills.size()
         ) * 100.0;
     }
+
+
+    // =============================================================
+    // GET MATCHED SKILLS
+    // =============================================================
 
     public List<String> getMatchedSkills(
             Set<String> candidateSkills,
@@ -46,6 +58,7 @@ public class SkillMatchingEngine {
         List<String> matchedSkills =
                 new ArrayList<>();
 
+
         if (candidateSkills == null ||
                 candidateSkills.isEmpty() ||
                 job == null ||
@@ -54,35 +67,81 @@ public class SkillMatchingEngine {
             return matchedSkills;
         }
 
+
+        // =========================================================
+        // NORMALIZE CANDIDATE SKILLS
+        // =========================================================
+
         Set<String> normalizedCandidateSkills =
                 new HashSet<>();
 
-        for (String skill : candidateSkills) {
 
-            if (skill != null) {
+        for (String skill :
+                candidateSkills) {
+
+            if (skill == null) {
+                continue;
+            }
+
+
+            String normalized =
+                    skill
+                            .trim()
+                            .toLowerCase();
+
+
+            if (!normalized.isEmpty()) {
 
                 normalizedCandidateSkills.add(
-                        skill.trim().toLowerCase()
+                        normalized
                 );
             }
         }
 
+
+        // =========================================================
+        // CHECK REQUIRED SKILLS ONLY
+        // =========================================================
+
         for (JobSkill jobSkill :
                 job.getRequiredSkills()) {
 
-            if (jobSkill == null ||
-                    jobSkill.getSkillName() == null) {
+            if (jobSkill == null) {
+                continue;
+            }
+
+
+            // Ignore optional skills for the main
+            // required-skill score.
+
+            if (!Boolean.TRUE.equals(
+                    jobSkill.getRequired()
+            )) {
 
                 continue;
             }
 
+
             String requiredSkill =
-                    jobSkill.getSkillName()
+                    jobSkill.getSkillName();
+
+
+            if (requiredSkill == null ||
+                    requiredSkill.trim().isEmpty()) {
+
+                continue;
+            }
+
+
+            String normalizedRequiredSkill =
+                    requiredSkill
                             .trim()
                             .toLowerCase();
 
-            if (normalizedCandidateSkills
-                    .contains(requiredSkill)) {
+
+            if (normalizedCandidateSkills.contains(
+                    normalizedRequiredSkill
+            )) {
 
                 matchedSkills.add(
                         jobSkill.getSkillName()
@@ -90,8 +149,14 @@ public class SkillMatchingEngine {
             }
         }
 
+
         return matchedSkills;
     }
+
+
+    // =============================================================
+    // GET REQUIRED SKILLS
+    // =============================================================
 
     private List<JobSkill> getRequiredSkills(
             Job job
@@ -103,10 +168,12 @@ public class SkillMatchingEngine {
             return List.of();
         }
 
+
         return job.getRequiredSkills()
                 .stream()
                 .filter(skill ->
-                        skill != null &&
+                        skill != null
+                                &&
                                 Boolean.TRUE.equals(
                                         skill.getRequired()
                                 )

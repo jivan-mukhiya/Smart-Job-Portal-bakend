@@ -35,6 +35,8 @@ import jakarta.persistence.EntityManager;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -81,6 +83,17 @@ public class JobSeekerServiceImpl
     private final EntityManager entityManager;
 
 
+    /*
+     * Public file base URL.
+     *
+     * application.properties:
+     *
+     * app.file.base-url=http://localhost:9000/api/v1
+     */
+    @Value("${app.file.base-url}")
+    private String fileBaseUrl;
+
+
     // =============================================================
     // CREATE
     // =============================================================
@@ -123,6 +136,7 @@ public class JobSeekerServiceImpl
                 jobSeekerMapper.toEntity(request);
 
         jobSeeker.setUser(user);
+
 
         /*
          * Save first because JobSeeker ID is required
@@ -231,6 +245,91 @@ public class JobSeekerServiceImpl
 
 
     // =============================================================
+    // GET MY PROFILE IMAGE
+    // =============================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getMyProfileImage() {
+
+        /*
+         * Get currently authenticated user.
+         */
+        User user = getCurrentUser();
+
+
+        /*
+         * Get JobSeeker belonging to the authenticated user.
+         *
+         * We intentionally do NOT accept a JobSeeker ID
+         * from the frontend.
+         */
+        JobSeeker jobSeeker =
+                jobSeekerRepository
+                        .findByUserId(user.getId())
+                        .orElseThrow(
+                                () -> new BusinessException(
+                                        ErrorCode.JOB_SEEKER_NOT_FOUND
+                                )
+                        );
+
+
+        /*
+         * Get profile image.
+         */
+        ProfileImage profileImage =
+                jobSeeker.getProfileImage();
+
+
+        /*
+         * Job seeker exists but does not have
+         * a profile image.
+         */
+        if (profileImage == null) {
+            return null;
+        }
+
+
+        /*
+         * Get stored image path.
+         *
+         * Example:
+         *
+         * uploads/jobseeker/profile/
+         * jobseeker_4_profile_20260914123000_xxx.jpg
+         */
+        String imagePath =
+                profileImage.getImagePath();
+
+
+        if (
+                imagePath == null
+                        || imagePath.trim().isEmpty()
+        ) {
+            return null;
+        }
+
+
+        /*
+         * Convert stored file path into a
+         * publicly accessible URL.
+         *
+         * Example:
+         *
+         * Stored path:
+         *
+         * uploads/jobseeker/profile/image.jpg
+         *
+         * Result:
+         *
+         * http://localhost:9000/api/v1/files/
+         * uploads/jobseeker/profile/image.jpg
+         */
+        return buildPublicFileUrl(imagePath);
+    }
+
+
+    // =============================================================
     // GET MY RESUME
     // =============================================================
 
@@ -312,12 +411,6 @@ public class JobSeekerServiceImpl
 
         /*
          * Resume file URL.
-         *
-         * Do NOT use:
-         *
-         * resume.getFileUrl()
-         *
-         * because Resume does not have a fileUrl field.
          */
         String fileUrl = null;
 
@@ -327,12 +420,10 @@ public class JobSeekerServiceImpl
         ) {
 
             /*
-             * Currently filePath is returned as the URL.
-             *
-             * If your FileStorageService uses a different
-             * public file URL, this can be changed there.
+             * Convert stored path to public URL.
              */
-            fileUrl = filePath;
+            fileUrl =
+                    buildPublicFileUrl(filePath);
         }
 
 
@@ -687,6 +778,7 @@ public class JobSeekerServiceImpl
                                 )
                         );
 
+
         if (
                 jobSeeker.getProfileImage() != null
         ) {
@@ -698,6 +790,7 @@ public class JobSeekerServiceImpl
             );
         }
 
+
         if (
                 jobSeeker.getResume() != null
         ) {
@@ -708,6 +801,7 @@ public class JobSeekerServiceImpl
                             .getFilePath()
             );
         }
+
 
         jobSeekerRepository.delete(
                 jobSeeker
@@ -889,11 +983,13 @@ public class JobSeekerServiceImpl
         ProfileImage existing =
                 jobSeeker.getProfileImage();
 
+
         if (existing != null) {
 
             deletePhysicalFile(
                     existing.getImagePath()
             );
+
 
             try {
 
@@ -952,17 +1048,21 @@ public class JobSeekerServiceImpl
         ProfileImage existing =
                 jobSeeker.getProfileImage();
 
+
         if (existing == null) {
             return;
         }
+
 
         deletePhysicalFile(
                 existing.getImagePath()
         );
 
+
         jobSeeker.setProfileImage(
                 null
         );
+
 
         entityManager.flush();
     }
@@ -984,6 +1084,7 @@ public class JobSeekerServiceImpl
         resume.setJobSeeker(
                 jobSeeker
         );
+
 
         try {
 
@@ -1029,6 +1130,7 @@ public class JobSeekerServiceImpl
                 );
             }
 
+
             return resume;
 
         } catch (IOException e) {
@@ -1049,6 +1151,7 @@ public class JobSeekerServiceImpl
         Resume existing =
                 jobSeeker.getResume();
 
+
         try {
 
             if (existing != null) {
@@ -1057,12 +1160,14 @@ public class JobSeekerServiceImpl
                         existing.getFilePath()
                 );
 
+
                 String filePath =
                         fileStorageService
                                 .storeJobSeekerResume(
                                         file,
                                         jobSeeker.getId()
                                 );
+
 
                 existing.setFilePath(
                         filePath
@@ -1124,8 +1229,10 @@ public class JobSeekerServiceImpl
             return;
         }
 
+
         Resume resume =
                 jobSeeker.getResume();
+
 
         if (resume == null) {
 
@@ -1169,17 +1276,21 @@ public class JobSeekerServiceImpl
         Resume resume =
                 jobSeeker.getResume();
 
+
         if (resume == null) {
             return;
         }
+
 
         deletePhysicalFile(
                 resume.getFilePath()
         );
 
+
         jobSeeker.setResume(
                 null
         );
+
 
         entityManager.flush();
     }
@@ -1198,8 +1309,10 @@ public class JobSeekerServiceImpl
             return;
         }
 
+
         Map<String, String> uniqueSkills =
                 new LinkedHashMap<>();
+
 
         for (String skillName : skills) {
 
@@ -1212,13 +1325,16 @@ public class JobSeekerServiceImpl
                 continue;
             }
 
+
             String trimmed =
                     skillName.trim();
+
 
             String normalized =
                     trimmed.toLowerCase(
                             Locale.ROOT
                     );
+
 
             uniqueSkills.putIfAbsent(
                     normalized,
@@ -1226,7 +1342,9 @@ public class JobSeekerServiceImpl
             );
         }
 
+
         int displayOrder = 0;
+
 
         for (
                 String skillName
@@ -1235,6 +1353,7 @@ public class JobSeekerServiceImpl
 
             JobSeekerSkill skill =
                     new JobSeekerSkill();
+
 
             skill.setJobSeeker(
                     jobSeeker
@@ -1249,6 +1368,7 @@ public class JobSeekerServiceImpl
             skill.setDisplayOrder(
                     displayOrder++
             );
+
 
             jobSeeker.addSkill(
                     skill
@@ -1265,16 +1385,20 @@ public class JobSeekerServiceImpl
         Long jobSeekerId =
                 jobSeeker.getId();
 
+
         jobSeekerSkillRepository
                 .deleteAllByJobSeekerId(
                         jobSeekerId
                 );
 
+
         jobSeekerSkillRepository.flush();
+
 
         jobSeeker
                 .getSkills()
                 .clear();
+
 
         addSkills(
                 jobSeeker,
@@ -1296,8 +1420,10 @@ public class JobSeekerServiceImpl
             return;
         }
 
+
         Set<SocialPlatform> addedPlatforms =
                 new LinkedHashSet<>();
+
 
         for (
                 SocialProfileRequest request
@@ -1307,6 +1433,7 @@ public class JobSeekerServiceImpl
             if (request == null) {
                 continue;
             }
+
 
             if (
                     request.getPlatform() == null
@@ -1318,6 +1445,7 @@ public class JobSeekerServiceImpl
                 continue;
             }
 
+
             if (
                     request.getUrl() == null
                             || request
@@ -1328,6 +1456,7 @@ public class JobSeekerServiceImpl
                 continue;
             }
 
+
             String platformValue =
                     request.getPlatform()
                             .trim()
@@ -1335,11 +1464,14 @@ public class JobSeekerServiceImpl
                                     Locale.ROOT
                             );
 
+
             String url =
                     request.getUrl()
                             .trim();
 
+
             SocialPlatform platform;
+
 
             try {
 
@@ -1355,12 +1487,15 @@ public class JobSeekerServiceImpl
                 continue;
             }
 
+
             if (!addedPlatforms.add(platform)) {
                 continue;
             }
 
+
             JobSeekerSocialProfile profile =
                     new JobSeekerSocialProfile();
+
 
             profile.setJobSeeker(
                     jobSeeker
@@ -1375,6 +1510,7 @@ public class JobSeekerServiceImpl
             );
 
             profile.setActive(true);
+
 
             jobSeeker.addSocialProfile(
                     profile
@@ -1391,16 +1527,20 @@ public class JobSeekerServiceImpl
         Long jobSeekerId =
                 jobSeeker.getId();
 
+
         jobSeekerSocialProfileRepository
                 .deleteAllByJobSeekerId(
                         jobSeekerId
                 );
 
+
         jobSeekerSocialProfileRepository.flush();
+
 
         jobSeeker
                 .getSocialProfiles()
                 .clear();
+
 
         addSocialProfiles(
                 jobSeeker,
@@ -1420,6 +1560,7 @@ public class JobSeekerServiceImpl
                         .getContext()
                         .getAuthentication();
 
+
         if (
                 authentication == null
                         || !authentication.isAuthenticated()
@@ -1430,8 +1571,10 @@ public class JobSeekerServiceImpl
             );
         }
 
+
         String email =
                 authentication.getName();
+
 
         return userRepository
                 .findByEmail(email)
@@ -1458,6 +1601,117 @@ public class JobSeekerServiceImpl
 
 
     // =============================================================
+    // BUILD PUBLIC FILE URL
+    // =============================================================
+
+    /**
+     * Converts a stored file path into a public API URL.
+     *
+     * Example input:
+     *
+     * uploads/jobseeker/profile/image.jpg
+     *
+     * Example output:
+     *
+     * http://localhost:9000/api/v1/files/
+     * uploads/jobseeker/profile/image.jpg
+     */
+    private String buildPublicFileUrl(
+            String filePath
+    ) {
+
+        if (
+                filePath == null
+                        || filePath.trim().isEmpty()
+        ) {
+            return null;
+        }
+
+
+        String path =
+                filePath.trim();
+
+
+        /*
+         * If the stored value is already a complete URL,
+         * don't add the base URL again.
+         */
+        if (
+                path.startsWith("http://")
+                        || path.startsWith("https://")
+        ) {
+
+            return path;
+        }
+
+
+        /*
+         * Remove leading slash(es).
+         */
+        while (path.startsWith("/")) {
+            path = path.substring(1);
+        }
+
+
+        /*
+         * Base URL:
+         *
+         * http://localhost:9000/api/v1
+         */
+        String baseUrl =
+                fileBaseUrl == null
+                        ? ""
+                        : fileBaseUrl.trim();
+
+
+        /*
+         * Remove trailing slash(es).
+         */
+        while (baseUrl.endsWith("/")) {
+
+            baseUrl =
+                    baseUrl.substring(
+                            0,
+                            baseUrl.length() - 1
+                    );
+        }
+
+
+        /*
+         * If the path already contains "files/",
+         * don't add another "/files/".
+         */
+        if (
+                path.startsWith("files/")
+                        || path.equals("files")
+        ) {
+
+            return baseUrl
+                    + "/"
+                    + path;
+        }
+
+
+        /*
+         * Normal expected case:
+         *
+         * base URL:
+         * http://localhost:9000/api/v1
+         *
+         * path:
+         * uploads/jobseeker/profile/image.jpg
+         *
+         * result:
+         * http://localhost:9000/api/v1/files/
+         * uploads/jobseeker/profile/image.jpg
+         */
+        return baseUrl
+                + "/files/"
+                + path;
+    }
+
+
+    // =============================================================
     // FILE DELETE
     // =============================================================
 
@@ -1471,6 +1725,7 @@ public class JobSeekerServiceImpl
         ) {
             return;
         }
+
 
         try {
 

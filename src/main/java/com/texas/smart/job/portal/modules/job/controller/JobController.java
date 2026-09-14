@@ -6,8 +6,11 @@ import com.texas.smart.job.portal.modules.job.dto.request.JobRequest;
 import com.texas.smart.job.portal.modules.job.dto.request.JobUpdateRequest;
 import com.texas.smart.job.portal.modules.job.dto.response.JobResponse;
 import com.texas.smart.job.portal.modules.job.service.JobService;
+
 import jakarta.validation.Valid;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,17 +22,16 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class JobController {
 
+    // =============================================================
+    // DEPENDENCY
+    // =============================================================
+
     private final JobService jobService;
 
     // =============================================================
     // CREATE JOB
     // =============================================================
 
-    /**
-     * Create Job
-     *
-     * COMPANY only
-     */
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_COMPANY')")
     public ResponseEntity<ApiResponse<JobResponse>> createJob(
@@ -53,11 +55,6 @@ public class JobController {
     // GET MY JOBS
     // =============================================================
 
-    /**
-     * Get current company's jobs
-     *
-     * COMPANY only
-     */
     @GetMapping("/me")
     @PreAuthorize("hasAuthority('ROLE_COMPANY')")
     public ResponseEntity<ApiResponse<PageResponse<JobResponse>>> getMyJobs(
@@ -83,11 +80,6 @@ public class JobController {
     // UPDATE JOB
     // =============================================================
 
-    /**
-     * Update Job
-     *
-     * ADMIN or Job Owner
-     */
     @PutMapping("/{jobId}")
     @PreAuthorize(
             "hasRole('ADMIN') or " +
@@ -116,11 +108,6 @@ public class JobController {
     // DELETE JOB
     // =============================================================
 
-    /**
-     * Delete Job
-     *
-     * ADMIN or Job Owner
-     */
     @DeleteMapping("/{jobId}")
     @PreAuthorize(
             "hasRole('ADMIN') or " +
@@ -143,11 +130,6 @@ public class JobController {
     // PUBLISH JOB
     // =============================================================
 
-    /**
-     * Publish Job
-     *
-     * ADMIN or Job Owner
-     */
     @PatchMapping("/{jobId}/publish")
     @PreAuthorize(
             "hasRole('ADMIN') or " +
@@ -172,11 +154,6 @@ public class JobController {
     // CLOSE JOB
     // =============================================================
 
-    /**
-     * Close Job
-     *
-     * ADMIN or Job Owner
-     */
     @PatchMapping("/{jobId}/close")
     @PreAuthorize(
             "hasRole('ADMIN') or " +
@@ -201,11 +178,6 @@ public class JobController {
     // UPDATE JOB STATUS
     // =============================================================
 
-    /**
-     * Update Job Status
-     *
-     * ADMIN or Job Owner
-     */
     @PatchMapping("/{jobId}/status")
     @PreAuthorize(
             "hasRole('ADMIN') or " +
@@ -234,11 +206,6 @@ public class JobController {
     // GET JOB BY ID
     // =============================================================
 
-    /**
-     * Get Job by ID
-     *
-     * Public
-     */
     @GetMapping("/{jobId}")
     public ResponseEntity<ApiResponse<JobResponse>> getJob(
             @PathVariable Long jobId
@@ -259,20 +226,17 @@ public class JobController {
     // GET PUBLISHED JOBS
     // =============================================================
 
-    /**
-     * Get Published Jobs
-     *
-     * Public
-     */
     @GetMapping("/published")
     public ResponseEntity<ApiResponse<PageResponse<JobResponse>>> getPublishedJobs(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String location,
             Pageable pageable
     ) {
 
         PageResponse<JobResponse> response =
                 jobService.getPublishedJobs(
                         search,
+                        location,
                         pageable
                 );
 
@@ -288,11 +252,6 @@ public class JobController {
     // GET JOBS BY COMPANY
     // =============================================================
 
-    /**
-     * Get Jobs by Company
-     *
-     * Public
-     */
     @GetMapping("/company/{companyId}")
     public ResponseEntity<ApiResponse<PageResponse<JobResponse>>> getJobsByCompany(
             @PathVariable Long companyId,
@@ -317,11 +276,6 @@ public class JobController {
     // GET ALL JOBS
     // =============================================================
 
-    /**
-     * Get All Jobs
-     *
-     * ADMIN only
-     */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<PageResponse<JobResponse>>> getAllJobs(

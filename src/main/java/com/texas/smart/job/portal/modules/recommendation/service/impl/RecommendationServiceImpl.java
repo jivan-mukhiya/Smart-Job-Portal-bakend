@@ -1,13 +1,16 @@
 package com.texas.smart.job.portal.modules.recommendation.service.impl;
 
+import com.texas.smart.job.portal.common.enums.JobStatus;
 import com.texas.smart.job.portal.modules.job.dto.response.JobResponse;
 import com.texas.smart.job.portal.modules.job.entity.Job;
 import com.texas.smart.job.portal.modules.job.mapper.JobMapper;
 import com.texas.smart.job.portal.modules.job.repository.JobRepository;
-import com.texas.smart.job.portal.modules.job.specification.JobSpecification;
+
 import com.texas.smart.job.portal.modules.jobseeker.entity.JobSeeker;
+import com.texas.smart.job.portal.modules.jobseeker.entity.JobSeekerSkill;
 import com.texas.smart.job.portal.modules.jobseeker.entity.Resume;
 import com.texas.smart.job.portal.modules.jobseeker.repository.JobSeekerRepository;
+
 import com.texas.smart.job.portal.modules.recommendation.dto.internal.CandidateProfile;
 import com.texas.smart.job.portal.modules.recommendation.dto.internal.JobMatchResult;
 import com.texas.smart.job.portal.modules.recommendation.engine.JobMatchingEngine;
@@ -16,66 +19,195 @@ import com.texas.smart.job.portal.modules.recommendation.processor.SkillExtracto
 import com.texas.smart.job.portal.modules.recommendation.processor.SkillNormalizer;
 import com.texas.smart.job.portal.modules.recommendation.processor.TextPreprocessor;
 import com.texas.smart.job.portal.modules.recommendation.service.RecommendationService;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+
 import org.springframework.data.jpa.domain.Specification;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.criteria.JoinType;
+
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class RecommendationServiceImpl implements RecommendationService {
+public class RecommendationServiceImpl
+        implements RecommendationService {
 
     private final JobRepository jobRepository;
+
     private final JobSeekerRepository jobSeekerRepository;
+
     private final JobMapper jobMapper;
 
     private final ResumeParser resumeParser;
+
     private final TextPreprocessor textPreprocessor;
+
     private final SkillExtractor skillExtractor;
+
     private final JobMatchingEngine jobMatchingEngine;
+
+    // =============================================================
+    // GET RECOMMENDED JOBS
+    // =============================================================
 
     @Override
     public Page<JobResponse> getRecommendedJobs(
             String search,
+            String location,
             Pageable pageable
     ) {
 
-        // 1. Get authenticated job seeker
-        JobSeeker jobSeeker = getAuthenticatedJobSeeker();
+        // =========================================================
+        // 1. GET AUTHENTICATED JOB SEEKER
+        // =========================================================
 
-        // 2. Get resume
-        Resume resume = jobSeeker.getResume();
+        JobSeeker jobSeeker =
+                getAuthenticatedJobSeeker();
+
+        // =========================================================
+        // 2. EXTRACT RESUME TEXT
+        // =========================================================
 
         String resumeText = "";
 
-        if (resume != null && resume.hasFile()) {
-            resumeText = resumeParser.extractText(resume);
+        Resume resume =
+                jobSeeker.getResume();
+
+        if (resume != null &&
+                resume.hasFile()) {
+
+            try {
+
+                resumeText =
+                        resumeParser.extractText(
+                                resume
+                        );
+
+                if (resumeText == null) {
+                    resumeText = "";
+                }
+
+            } catch (Exception exception) {
+
+                resumeText = "";
+            }
         }
 
-        // 3. Preprocess resume text
+        // =========================================================
+        // 3. PREPROCESS RESUME
+        // =========================================================
+
         String processedResumeText =
-                textPreprocessor.preprocess(resumeText);
+                textPreprocessor.preprocess(
+                        resumeText
+                );
 
-        // 4. Extract skills from resume
-        Set<String> extractedSkills =
-                skillExtractor.extractSkills(processedResumeText);
+        if (processedResumeText == null) {
+            processedResumeText = "";
+        }
 
-        // 5. Normalize extracted skills
+        // =========================================================
+        // 4. EXTRACT RESUME SKILLS
+        // =========================================================
+
+        Set<String> resumeSkills =
+                skillExtractor.extractSkills(
+                        processedResumeText
+                );
+
+        if (resumeSkills == null) {
+            resumeSkills = Set.of();
+        }
+
+        // =========================================================
+        // 5. GET PROFILE SKILLS
+        // =========================================================
+
+        Set<String> profileSkills =
+                new HashSet<>();
+
+        if (jobSeeker.getSkills() != null) {
+
+            for (JobSeekerSkill skill :
+                    jobSeeker.getSkills()) {
+
+                if (skill == null) {
+                    continue;
+                }
+
+                if (!Boolean.TRUE.equals(
+                        skill.getActive()
+                )) {
+                    continue;
+                }
+
+                String skillName =
+                        skill.getSkillName();
+
+                if (skillName == null ||
+                        skillName.trim().isEmpty()) {
+                    continue;
+                }
+
+                profileSkills.add(
+                        skillName.trim()
+                );
+            }
+        }
+
+        // =========================================================
+        // 6. NORMALIZE RESUME SKILLS
+        // =========================================================
+
+        Set<String> normalizedResumeSkills =
+                SkillNormalizer.normalizeSkills(
+                        resumeSkills
+                );
+
+        // =========================================================
+        // 7. NORMALIZE PROFILE SKILLS
+        // =========================================================
+
+        Set<String> normalizedProfileSkills =
+                SkillNormalizer.normalizeSkills(
+                        profileSkills
+                );
+
+        // =========================================================
+        // 8. COMBINE SKILLS
+        // =========================================================
+
         Set<String> normalizedSkills =
-                SkillNormalizer.normalizeSkills(extractedSkills);
+                new HashSet<>();
 
-        // 6. Build candidate profile
+        normalizedSkills.addAll(
+                normalizedResumeSkills
+        );
+
+        normalizedSkills.addAll(
+                normalizedProfileSkills
+        );
+
+        // =========================================================
+        // 9. BUILD CANDIDATE PROFILE
+        // =========================================================
+
         CandidateProfile candidateProfile =
                 buildCandidateProfile(
                         jobSeeker,
@@ -83,31 +215,87 @@ public class RecommendationServiceImpl implements RecommendationService {
                         normalizedSkills
                 );
 
-        // 7. Build job specification
-        Specification<Job> specification =
-                JobSpecification.publishedActiveJobs();
+        // =========================================================
+        // 10. BUILD BASE SPECIFICATION
+        // =========================================================
 
-        // 8. Apply optional search
+        Specification<Job> specification =
+                publishedActiveJobs();
+
+        // =========================================================
+        // 11. APPLY KEYWORD SEARCH
+        // =========================================================
+
         if (search != null &&
                 !search.trim().isEmpty()) {
 
-            specification = specification.and(
-                    JobSpecification.search(search.trim())
-            );
+            specification =
+                    specification.and(
+                            searchJobs(
+                                    search.trim()
+                            )
+                    );
         }
 
-        // 9. Get matching jobs
+        // =========================================================
+        // 12. APPLY LOCATION SEARCH
+        // =========================================================
+
+        if (location != null &&
+                !location.trim().isEmpty()) {
+
+            specification =
+                    specification.and(
+                            searchLocation(
+                                    location.trim()
+                            )
+                    );
+        }
+
+        // =========================================================
+        // 13. GET FILTERED JOBS
+        // =========================================================
+
         List<Job> jobs =
-                jobRepository.findAll(specification);
+                jobRepository.findAll(
+                        specification
+                );
 
-        // 10. Final safety filtering
-        jobs = jobs.stream()
-                .filter(Job::isPublished)
-                .filter(Job::isActive)
-                .filter(job -> !job.isExpired())
-                .toList();
+        // =========================================================
+        // 14. FINAL VALIDATION
+        // =========================================================
 
-        // 11. No jobs found
+        jobs =
+                jobs.stream()
+
+                        .filter(job ->
+                                job != null
+                        )
+
+                        .filter(job ->
+                                job.getStatus() ==
+                                        JobStatus.ACTIVE
+                                        ||
+                                        job.getStatus() ==
+                                                JobStatus.PUBLISHED
+                        )
+
+                        .filter(job ->
+                                Boolean.TRUE.equals(
+                                        job.getActive()
+                                )
+                        )
+
+                        .filter(job ->
+                                !job.isExpired()
+                        )
+
+                        .toList();
+
+        // =========================================================
+        // 15. NO JOBS
+        // =========================================================
+
         if (jobs.isEmpty()) {
 
             return new PageImpl<>(
@@ -117,13 +305,19 @@ public class RecommendationServiceImpl implements RecommendationService {
             );
         }
 
-        // 12. Build documents for TF-IDF
+        // =========================================================
+        // 16. BUILD JOB DOCUMENTS
+        // =========================================================
+
         List<String> jobDocuments =
                 jobs.stream()
                         .map(this::buildJobDocument)
                         .toList();
 
-        // 13. Calculate recommendation scores
+        // =========================================================
+        // 17. CALCULATE MATCH SCORES
+        // =========================================================
+
         List<JobMatchResult> results =
                 new ArrayList<>();
 
@@ -132,33 +326,67 @@ public class RecommendationServiceImpl implements RecommendationService {
             String jobDocument =
                     buildJobDocument(job);
 
-            JobMatchResult result =
-                    jobMatchingEngine.calculateMatch(
-                            candidateProfile,
-                            job,
-                            processedResumeText,
-                            jobDocument,
-                            jobDocuments
-                    );
+            try {
 
-            results.add(result);
+                JobMatchResult result =
+                        jobMatchingEngine.calculateMatch(
+                                candidateProfile,
+                                job,
+                                processedResumeText,
+                                jobDocument,
+                                jobDocuments
+                        );
+
+                if (result == null) {
+
+                    result =
+                            createZeroScoreResult(
+                                    job
+                            );
+                }
+
+                normalizeFinalScore(
+                        result
+                );
+
+                results.add(result);
+
+            } catch (Exception exception) {
+
+                results.add(
+                        createZeroScoreResult(
+                                job
+                        )
+                );
+            }
         }
 
-        // 14. Sort by highest recommendation score
+        // =========================================================
+        // 18. SORT HIGH SCORE -> LOW SCORE
+        // =========================================================
+
         results.sort(
                 Comparator.comparing(
                         JobMatchResult::getFinalScore,
-                        Comparator.reverseOrder()
+                        Comparator.nullsLast(
+                                Comparator.reverseOrder()
+                        )
                 )
         );
 
-        // 15. Pagination after ranking
+        // =========================================================
+        // 19. PAGINATION AFTER RANKING
+        // =========================================================
+
         int start =
                 (int) pageable.getOffset();
 
+        int pageSize =
+                pageable.getPageSize();
+
         int end =
                 Math.min(
-                        start + pageable.getPageSize(),
+                        start + pageSize,
                         results.size()
                 );
 
@@ -166,19 +394,33 @@ public class RecommendationServiceImpl implements RecommendationService {
 
         if (start >= results.size()) {
 
-            responseList = List.of();
+            responseList =
+                    List.of();
 
         } else {
 
             responseList =
-                    results.subList(start, end)
+                    results.subList(
+                                    start,
+                                    end
+                            )
                             .stream()
-                            .map(JobMatchResult::getJob)
-                            .map(jobMapper::toResponse)
+
+                            .map(
+                                    JobMatchResult::getJob
+                            )
+
+                            .map(
+                                    jobMapper::toResponse
+                            )
+
                             .toList();
         }
 
-        // 16. Return paginated recommendations
+        // =========================================================
+        // 20. RETURN
+        // =========================================================
+
         return new PageImpl<>(
                 responseList,
                 pageable,
@@ -186,40 +428,263 @@ public class RecommendationServiceImpl implements RecommendationService {
         );
     }
 
-    /**
-     * Build candidate profile from JobSeeker data
-     * and extracted resume information.
-     */
-    private CandidateProfile buildCandidateProfile(
-            JobSeeker jobSeeker,
-            String resumeText,
-            Set<String> skills
+    // =============================================================
+    // PUBLISHED + ACTIVE JOBS
+    // =============================================================
+
+    private Specification<Job> publishedActiveJobs() {
+
+        return (root, query, criteriaBuilder) -> {
+
+            query.distinct(true);
+
+            return criteriaBuilder.and(
+
+                    criteriaBuilder.equal(
+                            root.get("status"),
+                            JobStatus.ACTIVE
+                    ),
+
+                    criteriaBuilder.isTrue(
+                            root.get("active")
+                    )
+            );
+        };
+    }
+
+    // =============================================================
+    // KEYWORD SEARCH
+    // =============================================================
+
+    private Specification<Job> searchJobs(
+            String search
     ) {
 
-        return CandidateProfile.builder()
-                .jobSeekerId(jobSeeker.getId())
-                .fullName(jobSeeker.getFullName())
-                .professionalTitle(
-                        jobSeeker.getProfessionalTitle()
+        return (root, query, criteriaBuilder) -> {
+
+            query.distinct(true);
+
+            String pattern =
+                    "%" +
+                            search.toLowerCase() +
+                            "%";
+
+            var skillJoin =
+                    root.join(
+                            "requiredSkills",
+                            JoinType.LEFT
+                    );
+
+            return criteriaBuilder.or(
+
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(
+                                    criteriaBuilder.coalesce(
+                                            root.get("title"),
+                                            ""
+                                    )
+                            ),
+                            pattern
+                    ),
+
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(
+                                    criteriaBuilder.coalesce(
+                                            root.get("description"),
+                                            ""
+                                    )
+                            ),
+                            pattern
+                    ),
+
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(
+                                    criteriaBuilder.coalesce(
+                                            root.get("responsibilities"),
+                                            ""
+                                    )
+                            ),
+                            pattern
+                    ),
+
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(
+                                    criteriaBuilder.coalesce(
+                                            root.get("requirements"),
+                                            ""
+                                    )
+                            ),
+                            pattern
+                    ),
+
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(
+                                    criteriaBuilder.coalesce(
+                                            root.get("location"),
+                                            ""
+                                    )
+                            ),
+                            pattern
+                    ),
+
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(
+                                    criteriaBuilder.coalesce(
+                                            root.get("address"),
+                                            ""
+                                    )
+                            ),
+                            pattern
+                    ),
+
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(
+                                    criteriaBuilder.coalesce(
+                                            root.get("company")
+                                                    .get("companyName"),
+                                            ""
+                                    )
+                            ),
+                            pattern
+                    ),
+
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(
+                                    criteriaBuilder.coalesce(
+                                            skillJoin.get("skillName"),
+                                            ""
+                                    )
+                            ),
+                            pattern
+                    )
+            );
+        };
+    }
+
+    // =============================================================
+    // LOCATION SEARCH
+    // =============================================================
+
+    private Specification<Job> searchLocation(
+            String location
+    ) {
+
+        return (root, query, criteriaBuilder) -> {
+
+            query.distinct(true);
+
+            String pattern =
+                    "%" +
+                            location.toLowerCase() +
+                            "%";
+
+            return criteriaBuilder.or(
+
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(
+                                    criteriaBuilder.coalesce(
+                                            root.get("location"),
+                                            ""
+                                    )
+                            ),
+                            pattern
+                    ),
+
+                    criteriaBuilder.like(
+                            criteriaBuilder.lower(
+                                    criteriaBuilder.coalesce(
+                                            root.get("address"),
+                                            ""
+                                    )
+                            ),
+                            pattern
+                    )
+            );
+        };
+    }
+
+    // =============================================================
+    // NORMALIZE SCORE
+    // =============================================================
+
+    private void normalizeFinalScore(
+            JobMatchResult result
+    ) {
+
+        if (result == null) {
+            return;
+        }
+
+        Double score =
+                result.getFinalScore();
+
+        if (score == null ||
+                score.isNaN() ||
+                score.isInfinite()) {
+
+            result.setFinalScore(
+                    0.0
+            );
+
+            return;
+        }
+
+        if (score < 0.0) {
+
+            result.setFinalScore(
+                    0.0
+            );
+
+            return;
+        }
+
+        if (score > 100.0) {
+
+            result.setFinalScore(
+                    100.0
+            );
+        }
+    }
+
+    // =============================================================
+    // ZERO SCORE RESULT
+    // =============================================================
+
+    private JobMatchResult createZeroScoreResult(
+            Job job
+    ) {
+
+        return JobMatchResult.builder()
+
+                .job(job)
+
+                .skillScore(0.0)
+
+                .resumeSimilarityScore(0.0)
+
+                .titleScore(0.0)
+
+                .requirementScore(0.0)
+
+                .locationScore(0.0)
+
+                .experienceScore(0.0)
+
+                .educationScore(0.0)
+
+                .finalScore(0.0)
+
+                .matchedSkills(
+                        new ArrayList<>()
                 )
-                .about(jobSeeker.getAbout())
-                .location(jobSeeker.getAddress())
-                .address(jobSeeker.getAddress())
-                .yearsOfExperience(
-                        jobSeeker.getYearsOfExperience()
-                )
-                .highestEducation(
-                        jobSeeker.getHighestEducation()
-                )
-                .skills(skills)
-                .resumeText(resumeText)
+
                 .build();
     }
 
-    /**
-     * Get the JobSeeker belonging to
-     * the currently authenticated user.
-     */
+    // =============================================================
+    // GET AUTHENTICATED JOB SEEKER
+    // =============================================================
+
     private JobSeeker getAuthenticatedJobSeeker() {
 
         Authentication authentication =
@@ -239,36 +704,123 @@ public class RecommendationServiceImpl implements RecommendationService {
                 authentication.getName();
 
         return jobSeekerRepository
-                .findByUserEmail(email)
+                .findByUserEmailForRecommendation(
+                        email
+                )
                 .orElseThrow(() ->
                         new IllegalStateException(
-                                "Job seeker profile not found"
+                                "Job seeker profile not found for: "
+                                        + email
                         )
                 );
     }
 
-    /**
-     * Build searchable document for a job.
-     * This document is used by TF-IDF
-     * and cosine similarity.
-     */
-    private String buildJobDocument(Job job) {
+    // =============================================================
+    // BUILD CANDIDATE PROFILE
+    // =============================================================
+
+    private CandidateProfile buildCandidateProfile(
+            JobSeeker jobSeeker,
+            String resumeText,
+            Set<String> skills
+    ) {
+
+        return CandidateProfile.builder()
+
+                .jobSeekerId(
+                        jobSeeker.getId()
+                )
+
+                .fullName(
+                        jobSeeker.getFullName()
+                )
+
+                .professionalTitle(
+                        jobSeeker.getProfessionalTitle()
+                )
+
+                .about(
+                        jobSeeker.getAbout()
+                )
+
+                .location(
+                        jobSeeker.getAddress()
+                )
+
+                .address(
+                        jobSeeker.getAddress()
+                )
+
+                .yearsOfExperience(
+                        jobSeeker.getYearsOfExperience()
+                )
+
+                .highestEducation(
+                        jobSeeker.getHighestEducation()
+                )
+
+                .skills(
+                        skills != null
+                                ? skills
+                                : Set.of()
+                )
+
+                .resumeText(
+                        resumeText != null
+                                ? resumeText
+                                : ""
+                )
+
+                .build();
+    }
+
+    // =============================================================
+    // BUILD JOB DOCUMENT
+    // =============================================================
+
+    private String buildJobDocument(
+            Job job
+    ) {
 
         StringBuilder text =
                 new StringBuilder();
 
-        append(text, job.getTitle());
-        append(text, job.getDescription());
-        append(text, job.getResponsibilities());
-        append(text, job.getRequirements());
-        append(text, job.getLocation());
-        append(text, job.getAddress());
+        append(
+                text,
+                job.getTitle()
+        );
+
+        append(
+                text,
+                job.getDescription()
+        );
+
+        append(
+                text,
+                job.getResponsibilities()
+        );
+
+        append(
+                text,
+                job.getRequirements()
+        );
+
+        append(
+                text,
+                job.getLocation()
+        );
+
+        append(
+                text,
+                job.getAddress()
+        );
 
         if (job.getExperienceRequired() != null) {
 
             append(
                     text,
-                    job.getExperienceRequired().toString()
+                    job.getExperienceRequired()
+                            .toString()
             );
         }
 
@@ -280,20 +832,27 @@ public class RecommendationServiceImpl implements RecommendationService {
         if (job.getRequiredSkills() != null) {
 
             job.getRequiredSkills()
-                    .forEach(skill ->
+                    .forEach(skill -> {
+
+                        if (skill != null) {
+
                             append(
                                     text,
                                     skill.getSkillName()
-                            )
-                    );
+                            );
+                        }
+                    });
         }
 
-        return text.toString().trim();
+        return text
+                .toString()
+                .trim();
     }
 
-    /**
-     * Safely append non-empty text.
-     */
+    // =============================================================
+    // SAFE APPEND
+    // =============================================================
+
     private void append(
             StringBuilder builder,
             String value
@@ -302,7 +861,8 @@ public class RecommendationServiceImpl implements RecommendationService {
         if (value != null &&
                 !value.trim().isEmpty()) {
 
-            builder.append(value)
+            builder
+                    .append(value)
                     .append(" ");
         }
     }

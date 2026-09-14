@@ -7,14 +7,21 @@ import com.texas.smart.job.portal.modules.company.dto.request.CompanyStatusUpdat
 import com.texas.smart.job.portal.modules.company.dto.request.CompanyUpdateRequest;
 import com.texas.smart.job.portal.modules.company.dto.response.CompanyRegistrationResponse;
 import com.texas.smart.job.portal.modules.company.service.CompanyService;
+
 import jakarta.validation.Valid;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.security.access.prepost.PreAuthorize;
+
 import org.springframework.web.bind.annotation.*;
+
 
 @RestController
 @RequestMapping("/companies")
@@ -22,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 public class CompanyController {
 
     private final CompanyService companyService;
+
 
     // ============================================================
     // COMPANY USER
@@ -49,6 +57,7 @@ public class CompanyController {
                 );
     }
 
+
     /**
      * Get currently authenticated user's company.
      */
@@ -66,6 +75,7 @@ public class CompanyController {
                 )
         );
     }
+
 
     /**
      * Update own company.
@@ -94,17 +104,52 @@ public class CompanyController {
         );
     }
 
+
+    // ============================================================
+    // COMPANY LOGO
+    // ============================================================
+
+    /**
+     * Get company logo path.
+     *
+     * Example:
+     * GET /api/v1/companies/4/logo
+     */
+    @GetMapping("/{companyId}/logo")
+    public ResponseEntity<ApiResponse<String>> getCompanyLogo(
+            @PathVariable Long companyId
+    ) {
+
+        String logoPath =
+                companyService.getCompanyLogo(
+                        companyId
+                );
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Company logo retrieved successfully",
+                        logoPath
+                )
+        );
+    }
+
+
     // ============================================================
     // PUBLIC / AUTHENTICATED
     // ============================================================
 
+    /**
+     * Get company details by ID.
+     */
     @GetMapping("/{companyId}")
     public ResponseEntity<ApiResponse<CompanyRegistrationResponse>> getCompany(
             @PathVariable Long companyId
     ) {
 
         CompanyRegistrationResponse response =
-                companyService.getCompanyById(companyId);
+                companyService.getCompanyById(
+                        companyId
+                );
 
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -114,9 +159,14 @@ public class CompanyController {
         );
     }
 
+
+    /**
+     * Get active and approved companies.
+     */
     @GetMapping("/active")
-    public ResponseEntity<ApiResponse<PageResponse<CompanyRegistrationResponse>>>
-    getActiveCompanies(
+    public ResponseEntity<
+            ApiResponse<PageResponse<CompanyRegistrationResponse>>
+            > getActiveCompanies(
             @RequestParam(required = false) String search,
             Pageable pageable
     ) {
@@ -135,6 +185,7 @@ public class CompanyController {
         );
     }
 
+
     // ============================================================
     // ADMIN
     // ============================================================
@@ -144,8 +195,9 @@ public class CompanyController {
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<PageResponse<CompanyRegistrationResponse>>>
-    getAllCompanies(
+    public ResponseEntity<
+            ApiResponse<PageResponse<CompanyRegistrationResponse>>
+            > getAllCompanies(
             @RequestParam(required = false) String search,
             Pageable pageable
     ) {
@@ -163,6 +215,7 @@ public class CompanyController {
                 )
         );
     }
+
 
     /**
      * Admin approves/rejects/suspends company.
@@ -189,6 +242,7 @@ public class CompanyController {
         );
     }
 
+
     /**
      * Only ADMIN can delete company.
      */
@@ -198,7 +252,9 @@ public class CompanyController {
             @PathVariable Long companyId
     ) {
 
-        companyService.deleteCompany(companyId);
+        companyService.deleteCompany(
+                companyId
+        );
 
         return ResponseEntity.ok(
                 ApiResponse.success(

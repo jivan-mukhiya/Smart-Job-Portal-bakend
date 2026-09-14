@@ -3,7 +3,10 @@ package com.texas.smart.job.portal.modules.job.dto.response;
 import com.texas.smart.job.portal.common.enums.JobLevel;
 import com.texas.smart.job.portal.common.enums.JobStatus;
 import com.texas.smart.job.portal.common.enums.JobType;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -14,10 +17,6 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class JobResponse {
-
-    // =============================================================
-    // Basic Information
-    // =============================================================
 
     private Long id;
 
@@ -35,19 +34,11 @@ public class JobResponse {
 
     private String address;
 
-    // =============================================================
-    // Company
-    // =============================================================
-
     private Long companyId;
 
     private String companyName;
 
     private String companyLogo;
-
-    // =============================================================
-    // Salary
-    // =============================================================
 
     private Double salaryMin;
 
@@ -59,10 +50,6 @@ public class JobResponse {
 
     private String salaryRange;
 
-    // =============================================================
-    // Job Details
-    // =============================================================
-
     private JobType jobType;
 
     private JobLevel jobLevel;
@@ -73,19 +60,11 @@ public class JobResponse {
 
     private Integer vacancies;
 
-    // =============================================================
-    // Application Dates
-    // =============================================================
-
     private LocalDateTime applicationDeadline;
 
     private LocalDateTime postedDate;
 
     private LocalDateTime lastUpdatedDate;
-
-    // =============================================================
-    // Status
-    // =============================================================
 
     private JobStatus status;
 
@@ -95,25 +74,13 @@ public class JobResponse {
 
     private Boolean urgent;
 
-    // =============================================================
-    // Statistics
-    // =============================================================
+    private Long viewCount;
 
-    private Integer viewCount;
-
-    private Integer applicationCount;
-
-    // =============================================================
-    // Computed Flags
-    // =============================================================
+    private Long applicationCount;
 
     private Boolean expired;
 
     private Boolean published;
-
-    // =============================================================
-    // Relationships
-    // =============================================================
 
     @Builder.Default
     private List<JobSkillResponse> requiredSkills = new ArrayList<>();

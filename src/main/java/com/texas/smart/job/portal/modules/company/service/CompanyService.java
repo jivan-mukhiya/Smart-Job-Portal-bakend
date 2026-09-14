@@ -46,4 +46,7 @@ public interface CompanyService {
     boolean isEmailExists(String email);
 
     boolean isCompanyNameExists(String companyName);
+
+    String getCompanyLogo(Long companyId);
+
 }
